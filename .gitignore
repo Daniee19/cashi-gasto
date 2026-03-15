@@ -43,3 +43,37 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# ═══════════════════════════════════════════════════════════
+# SENSITIVE FILES - DO NOT COMMIT
+# ═══════════════════════════════════════════════════════════
+
+# Supabase/API credentials
+lib/core/constants/app_constants.dart
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Firebase (if used)
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+
+# Android keystore
+*.jks
+*.keystore
+key.properties
+android/key.properties
+
+# iOS certificates
+*.p12
+*.cer
+*.mobileprovision
+
+# Secret files
+**/secrets/
+**/credentials/
+*secret*
+*credential*

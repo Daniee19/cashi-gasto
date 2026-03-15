@@ -7,6 +7,7 @@ import '../../features/dashboard/presentation/dashboard_page.dart';
 import '../../features/goals/presentation/goals_page.dart';
 import '../../features/reports/presentation/reports_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
+import '../../features/transactions/presentation/pages/add_transaction_page.dart';
 import '../theme/theme.dart';
 
 /// Provider para el índice de navegación actual
@@ -121,7 +122,14 @@ class MainShell extends ConsumerWidget {
               subtitle: const Text('Añadir dinero recibido'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navigate to income registration
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AddTransactionPage(
+                      type: TransactionType.income,
+                    ),
+                  ),
+                );
               },
             ),
             AppSpacing.verticalGapSm,
@@ -141,7 +149,14 @@ class MainShell extends ConsumerWidget {
               subtitle: const Text('Añadir dinero gastado'),
               onTap: () {
                 Navigator.pop(context);
-                // TODO: Navigate to expense registration
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AddTransactionPage(
+                      type: TransactionType.expense,
+                    ),
+                  ),
+                );
               },
             ),
             AppSpacing.verticalGapMd,
