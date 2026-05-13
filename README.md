@@ -96,7 +96,7 @@ Conoce a **Cashito**, nuestra mascota amigable que te acompana en tu camino haci
 
 1. **Clona el repositorio**
    ```bash
-   git clone https://github.com/tu-usuario/cashi-gasto.git
+   git clone https://github.com/Daniee19/cashi-gasto.git
    cd cashi-gasto
    ```
 
@@ -281,7 +281,7 @@ Este proyecto esta bajo la Licencia MIT. Consulta el archivo [LICENSE](LICENSE) 
 
 **Cashi Gasto** - [@cashigasto](https://twitter.com/cashigasto)
 
-Link del proyecto: [https://github.com/tu-usuario/cashi-gasto](https://github.com/tu-usuario/cashi-gasto)
+Link del proyecto: [https://github.com/Daniee19/cashi-gasto](https://github.com/Daniee19/cashi-gasto)
 
 ---
 
