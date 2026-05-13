@@ -5,7 +5,12 @@
       "Bash(git checkout:*)",
       "Bash(git add:*)",
       "Bash(git reset:*)",
-      "Bash(git commit -m ':*)"
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)",
+      "Bash(sed -i 's|github.com/tu-usuario/cashi-gasto|github.com/Daniee19/cashi-gasto|g' README.md)",
+      "Bash(git commit:*)",
+      "Bash(find lib:*)",
+      "Bash(flutter pub:*)"
     ]
   }
 }
