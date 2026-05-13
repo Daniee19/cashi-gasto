@@ -1,0 +1,58 @@
+name: cashi_gasto
+description: "Cashi Gasto - App de gestion de finanzas personales"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+  flutter_svg: ^2.0.10+1
+  lottie: ^3.1.2
+  cached_network_image: ^3.3.1
+  fl_chart: ^0.68.0
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Navigation
+  go_router: ^14.2.0
+
+  # Backend - Supabase
+  supabase_flutter: ^2.5.6
+
+  # Utilities
+  flutter_dotenv: ^5.1.0
+  intl: ^0.19.0
+  image_picker: ^1.1.2
+  shared_preferences: ^2.2.3
+  flutter_local_notifications: ^17.2.1+2
+  uuid: ^4.4.0
+  equatable: ^2.0.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  riverpod_generator: ^2.4.0
+  build_runner: ^2.4.9
+  json_serializable: ^6.8.0
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - .env
+    - assets/images/
+    - assets/icons/
+    - assets/animations/
