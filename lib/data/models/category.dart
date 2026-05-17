@@ -42,7 +42,9 @@ class Category extends Equatable {
       userId: json['user_id'] as String?,
       name: json['name'] as String,
       description: json['description'] as String?,
-      type: CategoryType.fromString(json['type'] as String),
+      type: json['type'] != null
+          ? CategoryType.fromString(json['type'] as String)
+          : CategoryType.expense,
       icon: json['icon'] as String?,
       color: json['color'] as String?,
       isDefault: json['is_default'] as bool? ?? false,

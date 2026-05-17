@@ -3,7 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../data/models/category.dart';
+import '../../../data/models/fund.dart';
 import '../../../data/models/transaction.dart';
+import '../../providers/category_provider.dart';
+import '../../providers/fund_provider.dart';
 import '../../providers/transaction_provider.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
@@ -21,6 +25,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   TransactionType _transactionType = TransactionType.expense;
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
+
+  Category? _selectedCategory;
+  Fund? _selectedFund;
 
   @override
   void dispose() {
@@ -44,6 +51,16 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_selectedCategory == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selecciona una categoria'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     final amount = double.parse(_amountController.text);
@@ -53,6 +70,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       amount: amount,
       type: _transactionType,
       transactionDate: _selectedDate,
+      categoryId: _selectedCategory?.id,
+      fundId: _selectedFund?.id,
       note: _noteController.text.isNotEmpty ? _noteController.text : null,
     );
 
@@ -66,11 +85,222 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Error al guardar la transaccion'),
+            content: Text('Error al guardar la transaccion. Verifica tu conexion.'),
             backgroundColor: Colors.red,
           ),
         );
       }
+    }
+  }
+
+  void _showCategoryPicker() {
+    final categoryType = _transactionType == TransactionType.income
+        ? CategoryType.income
+        : CategoryType.expense;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => Consumer(
+          builder: (context, ref, _) {
+            final categoriesAsync = ref.watch(categoriesByTypeProvider(categoryType));
+
+            return Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'Seleccionar categoria',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: categoriesAsync.when(
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => Center(child: Text('Error: $e')),
+                    data: (categories) => categories.isEmpty
+                        ? const Center(child: Text('No hay categorias disponibles'))
+                        : ListView.builder(
+                            controller: scrollController,
+                            itemCount: categories.length,
+                            itemBuilder: (context, index) {
+                              final category = categories[index];
+                              return ListTile(
+                                leading: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: category.colorValue.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    _getCategoryIcon(category.icon),
+                                    color: category.colorValue,
+                                  ),
+                                ),
+                                title: Text(category.name),
+                                trailing: _selectedCategory?.id == category.id
+                                    ? const Icon(Icons.check, color: AppColors.primary)
+                                    : null,
+                                onTap: () {
+                                  setState(() => _selectedCategory = category);
+                                  Navigator.pop(context);
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showFundPicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.3,
+        maxChildSize: 0.8,
+        expand: false,
+        builder: (context, scrollController) => Consumer(
+          builder: (context, ref, _) {
+            final fundsAsync = ref.watch(fundsProvider);
+
+            return Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'Seleccionar cuenta',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: fundsAsync.when(
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (e, _) => Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.account_balance_wallet_outlined, size: 48, color: Colors.grey),
+                          const SizedBox(height: 16),
+                          Text('Error: $e'),
+                        ],
+                      ),
+                    ),
+                    data: (funds) => funds.isEmpty
+                        ? const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.account_balance_wallet_outlined, size: 48, color: Colors.grey),
+                                SizedBox(height: 16),
+                                Text('No tienes fondos creados'),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            controller: scrollController,
+                            itemCount: funds.length,
+                            itemBuilder: (context, index) {
+                              final fund = funds[index];
+                              return ListTile(
+                                leading: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.info.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    _getFundIcon(fund.type),
+                                    color: AppColors.info,
+                                  ),
+                                ),
+                                title: Text(fund.name),
+                                subtitle: Text(fund.type.displayName),
+                                trailing: _selectedFund?.id == fund.id
+                                    ? const Icon(Icons.check, color: AppColors.primary)
+                                    : null,
+                                onTap: () {
+                                  setState(() => _selectedFund = fund);
+                                  Navigator.pop(context);
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  IconData _getCategoryIcon(String? iconName) {
+    const iconMap = {
+      'restaurant': Icons.restaurant,
+      'directions_car': Icons.directions_car,
+      'movie': Icons.movie,
+      'shopping_bag': Icons.shopping_bag,
+      'medical_services': Icons.medical_services,
+      'school': Icons.school,
+      'receipt': Icons.receipt,
+      'more_horiz': Icons.more_horiz,
+      'payments': Icons.payments,
+      'trending_up': Icons.trending_up,
+      'card_giftcard': Icons.card_giftcard,
+    };
+    return iconMap[iconName] ?? Icons.category;
+  }
+
+  IconData _getFundIcon(FundType type) {
+    switch (type) {
+      case FundType.bank:
+        return Icons.account_balance;
+      case FundType.cash:
+        return Icons.payments;
+      case FundType.savings:
+        return Icons.savings;
     }
   }
 
@@ -104,7 +334,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         icon: Icons.arrow_upward,
                         color: AppColors.expense,
                         isSelected: _transactionType == TransactionType.expense,
-                        onTap: () => setState(() => _transactionType = TransactionType.expense),
+                        onTap: () => setState(() {
+                          _transactionType = TransactionType.expense;
+                          _selectedCategory = null; // Reset category when type changes
+                        }),
                       ),
                     ),
                     Expanded(
@@ -113,7 +346,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         icon: Icons.arrow_downward,
                         color: AppColors.income,
                         isSelected: _transactionType == TransactionType.income,
-                        onTap: () => setState(() => _transactionType = TransactionType.income),
+                        onTap: () => setState(() {
+                          _transactionType = TransactionType.income;
+                          _selectedCategory = null; // Reset category when type changes
+                        }),
                       ),
                     ),
                     Expanded(
@@ -122,7 +358,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         icon: Icons.swap_horiz,
                         color: AppColors.transfer,
                         isSelected: _transactionType == TransactionType.transfer,
-                        onTap: () => setState(() => _transactionType = TransactionType.transfer),
+                        onTap: () => setState(() {
+                          _transactionType = TransactionType.transfer;
+                          _selectedCategory = null; // Reset category when type changes
+                        }),
                       ),
                     ),
                   ],
@@ -166,20 +405,26 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: _selectedCategory?.colorValue.withOpacity(0.1) ??
+                        AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
-                    Icons.category_outlined,
-                    color: AppColors.primary,
+                  child: Icon(
+                    _selectedCategory != null
+                        ? _getCategoryIcon(_selectedCategory!.icon)
+                        : Icons.category_outlined,
+                    color: _selectedCategory?.colorValue ?? AppColors.primary,
                   ),
                 ),
                 title: const Text(AppStrings.category),
-                subtitle: const Text('Seleccionar categoria'),
+                subtitle: Text(
+                  _selectedCategory?.name ?? 'Seleccionar categoria',
+                  style: TextStyle(
+                    color: _selectedCategory != null ? null : AppColors.textMuted,
+                  ),
+                ),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  // TODO: Show category picker
-                },
+                onTap: _showCategoryPicker,
               ),
               const Divider(),
 
@@ -193,17 +438,22 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     color: AppColors.info.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
-                    Icons.account_balance_wallet_outlined,
+                  child: Icon(
+                    _selectedFund != null
+                        ? _getFundIcon(_selectedFund!.type)
+                        : Icons.account_balance_wallet_outlined,
                     color: AppColors.info,
                   ),
                 ),
                 title: const Text(AppStrings.fund),
-                subtitle: const Text('Seleccionar cuenta'),
+                subtitle: Text(
+                  _selectedFund?.name ?? 'Seleccionar cuenta (opcional)',
+                  style: TextStyle(
+                    color: _selectedFund != null ? null : AppColors.textMuted,
+                  ),
+                ),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  // TODO: Show fund picker
-                },
+                onTap: _showFundPicker,
               ),
               const Divider(),
 

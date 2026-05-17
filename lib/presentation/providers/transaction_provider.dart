@@ -38,6 +38,9 @@ class TransactionNotifier extends StateNotifier<AsyncValue<List<Transaction>>> {
     String? note,
   }) async {
     try {
+      print('DEBUG: Intentando agregar transaccion...');
+      print('DEBUG: categoryId=$categoryId, fundId=$fundId');
+
       await _repository.addTransaction(
         amount: amount,
         type: type,
@@ -48,9 +51,22 @@ class TransactionNotifier extends StateNotifier<AsyncValue<List<Transaction>>> {
         note: note,
       );
       await loadTransactions();
+      print('DEBUG: Transaccion agregada exitosamente');
+      return true;
+    } catch (e, stackTrace) {
+      print('ERROR al agregar transaccion: $e');
+      print('StackTrace: $stackTrace');
+      return false;
+    }
+  }
+
+  Future<bool> updateTransaction(Transaction transaction) async {
+    try {
+      await _repository.updateTransaction(transaction);
+      await loadTransactions();
       return true;
     } catch (e) {
-      print('Error al agregar transaccion: $e');
+      print('Error al actualizar transaccion: $e');
       return false;
     }
   }
@@ -61,6 +77,7 @@ class TransactionNotifier extends StateNotifier<AsyncValue<List<Transaction>>> {
       await loadTransactions();
       return true;
     } catch (e) {
+      print('Error al eliminar transaccion: $e');
       return false;
     }
   }

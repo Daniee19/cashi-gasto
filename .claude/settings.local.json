@@ -10,7 +10,9 @@
       "Bash(sed -i 's|github.com/tu-usuario/cashi-gasto|github.com/Daniee19/cashi-gasto|g' README.md)",
       "Bash(git commit:*)",
       "Bash(find lib:*)",
-      "Bash(flutter pub:*)"
+      "Bash(flutter pub:*)",
+      "Bash(dart analyze:*)",
+      "Bash(dart format:*)"
     ]
   }
 }

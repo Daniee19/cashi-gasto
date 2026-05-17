@@ -30,10 +30,16 @@ class TransactionRepository {
     String? note,
     String? receiptImage,
   }) async {
-    if (_userId == null) throw Exception('Usuario no autenticado');
+    final userId = _userId;
+    print('DEBUG TransactionRepository: userId=$userId');
+
+    if (userId == null) {
+      print('ERROR: Usuario no autenticado - _client.auth.currentUser es null');
+      throw Exception('Usuario no autenticado');
+    }
 
     final data = {
-      'user_id': _userId,
+      'user_id': userId,
       'amount': amount,
       'type': type.name,
       'transaction_date': transactionDate.toIso8601String().split('T')[0],
@@ -44,12 +50,15 @@ class TransactionRepository {
       'receipt_image': receiptImage,
     };
 
+    print('DEBUG TransactionRepository: Insertando data=$data');
+
     final response = await _client
         .from('transactions')
         .insert(data)
         .select()
         .single();
 
+    print('DEBUG TransactionRepository: Respuesta exitosa');
     return Transaction.fromJson(response);
   }
 

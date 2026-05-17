@@ -6,6 +6,7 @@ import '../presentation/screens/auth/onboarding_screen.dart';
 import '../presentation/screens/home/home_screen.dart';
 import '../presentation/screens/transactions/transaction_list_screen.dart';
 import '../presentation/screens/transactions/add_transaction_screen.dart';
+import '../presentation/screens/categories/categories_screen.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -62,6 +63,11 @@ class AppRoutes {
         path: addTransaction,
         name: 'addTransaction',
         builder: (context, state) => const AddTransactionScreen(),
+      ),
+      GoRoute(
+        path: categories,
+        name: 'categories',
+        builder: (context, state) => const CategoriesScreen(),
       ),
       // TODO: Add remaining routes as screens are implemented
     ],
