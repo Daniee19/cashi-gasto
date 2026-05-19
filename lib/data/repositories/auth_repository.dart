@@ -59,20 +59,10 @@ class AuthRepository {
         return AuthResult.failure('Error al crear la cuenta');
       }
 
-      // Crear perfil en la tabla users
-      await _createUserProfile(
-        userId: response.user!.id,
-        email: email,
-        fullName: fullName,
-      );
-
+      // El perfil se crea automáticamente via trigger en Supabase
       return AuthResult.success(response.user!);
     } on AuthException catch (e) {
       return AuthResult.failure(_mapAuthError(e.message));
-    } on PostgrestException catch (e) {
-      // Si falla la creación del perfil, eliminar el usuario de auth
-      await _client.auth.signOut();
-      return AuthResult.failure('Error al crear el perfil: ${e.message}');
     } catch (e) {
       return AuthResult.failure('Error inesperado: $e');
     }
@@ -97,20 +87,6 @@ class AuthRepository {
       print('Error verificando perfil: $e');
       return false;
     }
-  }
-
-  /// Crea el perfil del usuario en la tabla users
-  Future<void> _createUserProfile({
-    required String userId,
-    required String email,
-    required String fullName,
-  }) async {
-    await _client.from('users').insert({
-      'id': userId,
-      'email': email,
-      'full_name': fullName,
-      'help_mode': 'general',
-    });
   }
 
   /// Mapea errores de Supabase a mensajes amigables

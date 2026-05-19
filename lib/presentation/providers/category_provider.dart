@@ -12,9 +12,12 @@ final categoriesProvider = FutureProvider<List<Category>>((ref) async {
 });
 
 /// Provider para categorías filtradas por tipo de transacción
-final categoriesByTypeProvider = FutureProvider.family<List<Category>, CategoryType>((ref, type) async {
-  final repository = ref.watch(categoryRepositoryProvider);
-  return repository.getCategoriesByType(type);
+/// Depende de categoryNotifierProvider para mantenerse sincronizado
+final categoriesByTypeProvider = Provider.family<AsyncValue<List<Category>>, CategoryType>((ref, type) {
+  final categoriesState = ref.watch(categoryNotifierProvider);
+  return categoriesState.whenData(
+    (categories) => categories.where((c) => c.type == type).toList(),
+  );
 });
 
 class CategoryNotifier extends StateNotifier<AsyncValue<List<Category>>> {
