@@ -13,7 +13,8 @@ class TransactionRepository {
         .from('transactions')
         .select()
         .eq('user_id', _userId!)
-        .order('transaction_date', ascending: false);
+        .order('transaction_date', ascending: false)
+        .order('created_at', ascending: false);
 
     return (response as List)
         .map((json) => Transaction.fromJson(json))
@@ -94,7 +95,8 @@ class TransactionRepository {
         .eq('user_id', _userId!)
         .gte('transaction_date', startDate.toIso8601String().split('T')[0])
         .lte('transaction_date', endDate.toIso8601String().split('T')[0])
-        .order('transaction_date', ascending: false);
+        .order('transaction_date', ascending: false)
+        .order('created_at', ascending: false);
 
     return (response as List)
         .map((json) => Transaction.fromJson(json))
