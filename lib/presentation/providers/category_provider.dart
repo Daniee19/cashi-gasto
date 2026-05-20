@@ -58,6 +58,28 @@ class CategoryNotifier extends StateNotifier<AsyncValue<List<Category>>> {
       return false;
     }
   }
+
+  Future<bool> updateCategory({
+    required String id,
+    required String name,
+    String? description,
+    String? icon,
+    String? color,
+  }) async {
+    try {
+      await _repository.updateCategory(
+        id: id,
+        name: name,
+        description: description,
+        icon: icon,
+        color: color,
+      );
+      await loadCategories();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 }
 
 final categoryNotifierProvider =

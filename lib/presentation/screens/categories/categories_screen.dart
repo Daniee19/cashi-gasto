@@ -312,12 +312,39 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen>
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      // TODO: Implement update
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Funcion proximamente disponible')),
+                    onPressed: () async {
+                      if (titleController.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Ingresa un titulo')),
+                        );
+                        return;
+                      }
+
+                      final notifier = ref.read(categoryNotifierProvider.notifier);
+                      final success = await notifier.updateCategory(
+                        id: category.id,
+                        name: titleController.text,
+                        description: descriptionController.text.isNotEmpty
+                            ? descriptionController.text
+                            : null,
+                        icon: selectedEmoji,
                       );
+
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        if (success) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Categoria actualizada')),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Error al actualizar categoria'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),

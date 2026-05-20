@@ -74,6 +74,39 @@ class CategoryRepository {
     }
   }
 
+  /// Actualiza una categoría personalizada
+  Future<Category> updateCategory({
+    required String id,
+    required String name,
+    String? description,
+    String? icon,
+    String? color,
+  }) async {
+    if (_userId == null) throw Exception('Usuario no autenticado');
+
+    final data = {
+      'name': name,
+      'description': description,
+      'icon': icon,
+      'color': color,
+    };
+
+    try {
+      final response = await _client
+          .from('categories')
+          .update(data)
+          .eq('id', id)
+          .eq('user_id', _userId!)
+          .select()
+          .single();
+
+      return Category.fromJson(response);
+    } catch (e) {
+      print('ERROR CategoryRepository updateCategory: $e');
+      rethrow;
+    }
+  }
+
   /// Elimina una categoría personalizada
   Future<void> deleteCategory(String id) async {
     if (_userId == null) throw Exception('Usuario no autenticado');
