@@ -37,6 +37,9 @@ dependencies:
   flutter_local_notifications: ^17.2.1+2
   uuid: ^4.4.0
   equatable: ^2.0.5
+  pdf: ^3.11.1
+  printing: ^5.13.3
+  path_provider: ^2.1.4
 
 dev_dependencies:
   flutter_test:

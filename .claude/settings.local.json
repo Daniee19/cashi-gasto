@@ -12,7 +12,8 @@
       "Bash(find lib:*)",
       "Bash(flutter pub:*)",
       "Bash(dart analyze:*)",
-      "Bash(dart format:*)"
+      "Bash(dart format:*)",
+      "Bash(wc:*)"
     ]
   }
 }

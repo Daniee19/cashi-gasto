@@ -8,8 +8,13 @@ import '../../../core/constants/app_strings.dart';
 import '../../../data/models/transaction.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/category_provider.dart';
+import '../../providers/user_profile_provider.dart';
+import '../../providers/fund_provider.dart';
+import '../../providers/selected_fund_provider.dart';
+import '../../../services/budget_alert_service.dart';
 import '../more/more_screen.dart';
 import '../transactions/transaction_list_screen.dart';
+import '../budgets/budgets_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -22,6 +27,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _currentIndex = 0;
 
   @override
+  void initState() {
+    super.initState();
+    // Initialize budget alert monitoring
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(budgetAlertTriggerProvider);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
@@ -29,7 +43,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         children: [
           _buildHomeContent(context),
           const TransactionListScreen(showAppBar: false),
-          _buildBudgetsContent(context),
+          const BudgetsScreen(showAppBar: false),
           const MoreScreen(),
         ],
       ),
@@ -68,13 +82,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildHomeContent(BuildContext context) {
-    final transactionsAsync = ref.watch(transactionNotifierProvider);
+    final filteredTransactionsAsync = ref.watch(filteredTransactionsProvider);
     final categoriesAsync = ref.watch(categoryNotifierProvider);
+    final userProfileAsync = ref.watch(userProfileNotifierProvider);
+    final fundsAsync = ref.watch(fundNotifierProvider);
+    final selectedFundId = ref.watch(selectedFundIdProvider);
+    final filteredBalance = ref.watch(filteredBalanceProvider);
+
+    // Obtener nombre del usuario
+    final userName = userProfileAsync.when(
+      loading: () => 'Usuario',
+      error: (_, __) => 'Usuario',
+      data: (profile) => profile?.fullName ?? 'Usuario',
+    );
 
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: () async {
           ref.read(transactionNotifierProvider.notifier).loadTransactions();
+          ref.read(userProfileNotifierProvider.notifier).loadUserProfile();
+          ref.read(fundNotifierProvider.notifier).loadFunds();
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -96,7 +123,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                       ),
                       Text(
-                        'Usuario',
+                        userName,
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
@@ -120,27 +147,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
-              // Balance Card - with real data
-              transactionsAsync.when(
-                loading: () => _buildBalanceCard(context, 0, 0, 0),
-                error: (_, __) => _buildBalanceCard(context, 0, 0, 0),
-                data: (transactions) {
-                  double totalIncome = 0;
-                  double totalExpense = 0;
+              // Fund Selector
+              _buildFundSelector(context, fundsAsync, selectedFundId),
+              const SizedBox(height: 16),
 
-                  for (final t in transactions) {
-                    if (t.type == TransactionType.income) {
-                      totalIncome += t.amount;
-                    } else if (t.type == TransactionType.expense) {
-                      totalExpense += t.amount;
-                    }
-                  }
-
-                  final balance = totalIncome - totalExpense;
-                  return _buildBalanceCard(context, balance, totalIncome, totalExpense);
-                },
+              // Balance Card - with filtered data
+              _buildBalanceCard(
+                context,
+                filteredBalance.balance,
+                filteredBalance.income,
+                filteredBalance.expense,
               ),
               const SizedBox(height: 24),
 
@@ -222,7 +240,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     icon: Icons.pie_chart,
                     label: 'Reportes',
                     color: AppColors.warning,
-                    onTap: () {},
+                    onTap: () => context.push(AppRoutes.reports),
                   ),
                   _QuickAction(
                     icon: Icons.chat,
@@ -252,8 +270,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SizedBox(height: 8),
 
-              // Recent transactions list
-              transactionsAsync.when(
+              // Recent transactions list (filtered by fund)
+              filteredTransactionsAsync.when(
                 loading: () => const Center(
                   child: Padding(
                     padding: EdgeInsets.all(32),
@@ -479,35 +497,97 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildBudgetsContent(BuildContext context) {
-    return SafeArea(
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.savings_outlined,
-              size: 64,
-              color: AppColors.textMuted.withOpacity(0.5),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Presupuestos',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Proximamente',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textMuted,
-                  ),
-            ),
-          ],
+  Widget _buildFundSelector(
+    BuildContext context,
+    AsyncValue<List<dynamic>> fundsAsync,
+    String? selectedFundId,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.1),
         ),
       ),
+      child: fundsAsync.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: Text('Cargando fondos...'),
+        ),
+        error: (_, __) => const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: Text('Error al cargar fondos'),
+        ),
+        data: (funds) {
+          return DropdownButtonHideUnderline(
+            child: DropdownButton<String?>(
+              value: selectedFundId,
+              isExpanded: true,
+              icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.primary),
+              hint: Row(
+                children: [
+                  Icon(Icons.account_balance_wallet,
+                       size: 20,
+                       color: AppColors.primary.withOpacity(0.7)),
+                  const SizedBox(width: 8),
+                  const Text('Todos los fondos'),
+                ],
+              ),
+              items: [
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Row(
+                    children: [
+                      Icon(Icons.all_inclusive,
+                           size: 20,
+                           color: AppColors.primary.withOpacity(0.7)),
+                      const SizedBox(width: 8),
+                      const Text('Todos los fondos'),
+                    ],
+                  ),
+                ),
+                ...funds.map((fund) {
+                  final icon = _getFundIcon(fund.type.name);
+                  return DropdownMenuItem<String?>(
+                    value: fund.id,
+                    child: Row(
+                      children: [
+                        Icon(icon, size: 20, color: AppColors.primary.withOpacity(0.7)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            fund.name,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+              onChanged: (value) {
+                ref.read(selectedFundIdProvider.notifier).state = value;
+              },
+            ),
+          );
+        },
+      ),
     );
+  }
+
+  IconData _getFundIcon(String type) {
+    switch (type) {
+      case 'bank':
+        return Icons.account_balance;
+      case 'cash':
+        return Icons.payments;
+      case 'savings':
+        return Icons.savings;
+      default:
+        return Icons.account_balance_wallet;
+    }
   }
 }
 

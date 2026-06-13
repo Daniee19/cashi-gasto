@@ -90,18 +90,28 @@ class MoreScreen extends ConsumerWidget {
             iconColor: AppColors.info,
             title: 'Fondos / Cuentas',
             subtitle: 'Administra tus cuentas',
-            onTap: () {
-              // TODO: Navigate to funds
-            },
+            onTap: () => context.push(AppRoutes.funds),
+          ),
+          _OptionTile(
+            icon: Icons.flag,
+            iconColor: AppColors.success,
+            title: 'Metas financieras',
+            subtitle: 'Gestiona tus objetivos de ahorro',
+            onTap: () => context.push(AppRoutes.goals),
           ),
           _OptionTile(
             icon: Icons.notifications,
             iconColor: AppColors.warning,
-            title: 'Notificaciones',
-            subtitle: 'Configura tus alertas',
-            onTap: () {
-              // TODO: Navigate to notifications
-            },
+            title: 'Alertas',
+            subtitle: 'Ver y gestionar alertas',
+            onTap: () => context.push(AppRoutes.alerts),
+          ),
+          _OptionTile(
+            icon: Icons.pie_chart,
+            iconColor: Colors.orange,
+            title: 'Reportes',
+            subtitle: 'Estadisticas y graficos',
+            onTap: () => context.push(AppRoutes.reports),
           ),
           _OptionTile(
             icon: Icons.color_lens,

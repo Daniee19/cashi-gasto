@@ -7,6 +7,11 @@ import '../presentation/screens/home/home_screen.dart';
 import '../presentation/screens/transactions/transaction_list_screen.dart';
 import '../presentation/screens/transactions/add_transaction_screen.dart';
 import '../presentation/screens/categories/categories_screen.dart';
+import '../presentation/screens/funds/funds_screen.dart';
+import '../presentation/screens/funds/transfer_fund_screen.dart';
+import '../presentation/screens/goals/goals_screen.dart';
+import '../presentation/screens/alerts/alerts_screen.dart';
+import '../presentation/screens/reports/reports_screen.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -20,8 +25,11 @@ class AppRoutes {
   static const String transactions = '/transactions';
   static const String addTransaction = '/transactions/add';
   static const String categories = '/categories';
+  static const String funds = '/funds';
+  static const String transferFunds = '/funds/transfer';
   static const String budgets = '/budgets';
   static const String goals = '/goals';
+  static const String alerts = '/alerts';
   static const String loans = '/loans';
   static const String reports = '/reports';
   static const String chatbot = '/chatbot';
@@ -68,6 +76,31 @@ class AppRoutes {
         path: categories,
         name: 'categories',
         builder: (context, state) => const CategoriesScreen(),
+      ),
+      GoRoute(
+        path: funds,
+        name: 'funds',
+        builder: (context, state) => const FundsScreen(),
+      ),
+      GoRoute(
+        path: transferFunds,
+        name: 'transferFunds',
+        builder: (context, state) => const TransferFundScreen(),
+      ),
+      GoRoute(
+        path: goals,
+        name: 'goals',
+        builder: (context, state) => const GoalsScreen(),
+      ),
+      GoRoute(
+        path: alerts,
+        name: 'alerts',
+        builder: (context, state) => const AlertsScreen(),
+      ),
+      GoRoute(
+        path: reports,
+        name: 'reports',
+        builder: (context, state) => const ReportsScreen(),
       ),
       // TODO: Add remaining routes as screens are implemented
     ],

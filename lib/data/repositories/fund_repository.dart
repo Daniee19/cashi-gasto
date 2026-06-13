@@ -58,6 +58,32 @@ class FundRepository {
         .eq('user_id', _userId!);
   }
 
+  /// Actualiza un fondo
+  Future<Fund> updateFund({
+    required String id,
+    required String name,
+    required FundType type,
+    String? icon,
+  }) async {
+    if (_userId == null) throw Exception('Usuario no autenticado');
+
+    final data = {
+      'name': name,
+      'type': type.name,
+      'icon': icon,
+    };
+
+    final response = await _client
+        .from('funds')
+        .update(data)
+        .eq('id', id)
+        .eq('user_id', _userId!)
+        .select()
+        .single();
+
+    return Fund.fromJson(response);
+  }
+
   /// Elimina un fondo
   Future<void> deleteFund(String id) async {
     if (_userId == null) throw Exception('Usuario no autenticado');
@@ -66,6 +92,38 @@ class FundRepository {
         .from('funds')
         .delete()
         .eq('id', id)
+        .eq('user_id', _userId!);
+  }
+
+  /// Transfiere dinero entre fondos
+  Future<void> transferBetweenFunds({
+    required String fromFundId,
+    required String toFundId,
+    required double amount,
+  }) async {
+    if (_userId == null) throw Exception('Usuario no autenticado');
+    if (amount <= 0) throw Exception('El monto debe ser mayor a 0');
+
+    // Obtener los fondos
+    final funds = await getFunds();
+    final fromFund = funds.firstWhere((f) => f.id == fromFundId);
+    final toFund = funds.firstWhere((f) => f.id == toFundId);
+
+    if (fromFund.balance < amount) {
+      throw Exception('Saldo insuficiente en el fondo de origen');
+    }
+
+    // Actualizar balances
+    await _client
+        .from('funds')
+        .update({'balance': fromFund.balance - amount})
+        .eq('id', fromFundId)
+        .eq('user_id', _userId!);
+
+    await _client
+        .from('funds')
+        .update({'balance': toFund.balance + amount})
+        .eq('id', toFundId)
         .eq('user_id', _userId!);
   }
 }

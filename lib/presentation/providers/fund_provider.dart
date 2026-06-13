@@ -57,6 +57,44 @@ class FundNotifier extends StateNotifier<AsyncValue<List<Fund>>> {
       return false;
     }
   }
+
+  Future<bool> updateFund({
+    required String id,
+    required String name,
+    required FundType type,
+    String? icon,
+  }) async {
+    try {
+      await _repository.updateFund(
+        id: id,
+        name: name,
+        type: type,
+        icon: icon,
+      );
+      await loadFunds();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<({bool success, String? error})> transferBetweenFunds({
+    required String fromFundId,
+    required String toFundId,
+    required double amount,
+  }) async {
+    try {
+      await _repository.transferBetweenFunds(
+        fromFundId: fromFundId,
+        toFundId: toFundId,
+        amount: amount,
+      );
+      await loadFunds();
+      return (success: true, error: null);
+    } catch (e) {
+      return (success: false, error: e.toString());
+    }
+  }
 }
 
 final fundNotifierProvider =

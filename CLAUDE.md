@@ -29,9 +29,24 @@ flutter analyze
 # Run tests
 flutter test
 
+# Run a single test file
+flutter test test/widget_test.dart
+
 # Clean build
 flutter clean && flutter pub get
+
+# Build release APK
+flutter build apk --release
 ```
+
+## Environment Setup
+
+Requires `.env` file in project root with Supabase credentials:
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_anon_key
+```
+Copy from `.env.example` if available.
 
 ## Architecture
 
@@ -72,12 +87,16 @@ lib/
 ## Database
 
 Schema is defined in `supabase_schema.sql` at project root. Key tables:
-- `user_profiles` - extends Supabase auth.users
+- `users` - extends Supabase auth.users (NOT user_profiles)
 - `transactions`, `categories`, `funds` - core finance tracking
 - `budgets`, `financial_goals`, `loans` - planning features
 - `abstinence_tracker`, `blocked_apps`, `blocked_domains` - addiction support
 
-All tables use UUID primary keys and Row Level Security (RLS) policies.
+Important:
+- All tables use UUID primary keys and Row Level Security (RLS) policies
+- User profile is auto-created via `handle_new_user()` trigger on auth.users insert
+- Default categories have `user_id = NULL` and `is_default = true` - visible to all users
+- User-created categories have `user_id` set
 
 ## Key Patterns
 
@@ -87,10 +106,21 @@ All tables use UUID primary keys and Row Level Security (RLS) policies.
 - `copyWith()` method
 - Enum types with `fromString()` static method
 
-**Navigation**: Use `context.go()` for replacement, `context.push()` for stack navigation. Route constants in `AppRoutes`.
+**Providers**: Three-tier pattern for each feature:
+1. `xxxRepositoryProvider` - provides repository instance
+2. `xxxProvider` - simple FutureProvider for read-only data
+3. `xxxNotifierProvider` - StateNotifierProvider with `AsyncValue<List<T>>` for CRUD operations
 
-**Supabase**: Access client via `Supabase.instance.client` or helper in `supabase_client.dart`.
+StateNotifier pattern in use wraps state in `AsyncValue` and exposes methods that return `Future<bool>` for success/failure. After mutations, call `loadXxx()` to refresh state.
+
+**Navigation**: Use `context.go()` for replacement, `context.push()` for stack navigation. Route constants in `AppRoutes` class.
+
+**Supabase**: Access client via `Supabase.instance.client`. All repository methods check `_userId` before queries and throw if unauthenticated.
 
 ## Android Configuration
 
 `minSdk` is set to 23. Core library desugaring is enabled for `flutter_local_notifications` compatibility.
+
+## Language
+
+User-facing strings and validation messages are in Spanish. Core utilities are in `lib/core/utils/` including `Validators` for form validation and formatters for currency/dates.
