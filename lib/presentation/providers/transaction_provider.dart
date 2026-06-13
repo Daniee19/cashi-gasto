@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/transaction.dart';
 import '../../data/repositories/transaction_repository.dart';
+import 'budget_provider.dart';
 
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
   return TransactionRepository();
@@ -13,9 +14,15 @@ final transactionsProvider = FutureProvider<List<Transaction>>((ref) async {
 
 class TransactionNotifier extends StateNotifier<AsyncValue<List<Transaction>>> {
   final TransactionRepository _repository;
+  final Ref _ref;
 
-  TransactionNotifier(this._repository) : super(const AsyncValue.loading()) {
+  TransactionNotifier(this._repository, this._ref) : super(const AsyncValue.loading()) {
     loadTransactions();
+  }
+
+  /// Refresca los presupuestos después de modificar transacciones
+  void _refreshBudgets() {
+    _ref.read(budgetNotifierProvider.notifier).loadBudgets();
   }
 
   Future<void> loadTransactions() async {
@@ -51,6 +58,7 @@ class TransactionNotifier extends StateNotifier<AsyncValue<List<Transaction>>> {
         note: note,
       );
       await loadTransactions();
+      _refreshBudgets(); // Actualizar presupuestos al agregar gasto
       print('DEBUG: Transaccion agregada exitosamente');
       return true;
     } catch (e, stackTrace) {
@@ -64,6 +72,7 @@ class TransactionNotifier extends StateNotifier<AsyncValue<List<Transaction>>> {
     try {
       await _repository.updateTransaction(transaction);
       await loadTransactions();
+      _refreshBudgets(); // Actualizar presupuestos al modificar transacción
       return true;
     } catch (e) {
       print('Error al actualizar transaccion: $e');
@@ -75,6 +84,7 @@ class TransactionNotifier extends StateNotifier<AsyncValue<List<Transaction>>> {
     try {
       await _repository.deleteTransaction(id);
       await loadTransactions();
+      _refreshBudgets(); // Actualizar presupuestos al eliminar transacción
       return true;
     } catch (e) {
       print('Error al eliminar transaccion: $e');
@@ -86,5 +96,5 @@ class TransactionNotifier extends StateNotifier<AsyncValue<List<Transaction>>> {
 final transactionNotifierProvider =
     StateNotifierProvider<TransactionNotifier, AsyncValue<List<Transaction>>>((ref) {
   final repository = ref.watch(transactionRepositoryProvider);
-  return TransactionNotifier(repository);
+  return TransactionNotifier(repository, ref);
 });
