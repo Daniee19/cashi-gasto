@@ -29,7 +29,7 @@ class FinancialGoalRepository {
         .from('financial_goals')
         .select()
         .eq('user_id', _userId!)
-        .eq('status', status.name)
+        .eq('status', status.value)
         .order('created_at', ascending: false);
 
     return (response as List)
@@ -59,7 +59,7 @@ class FinancialGoalRepository {
       'target_amount': targetAmount,
       'current_amount': initialAmount,
       'deadline': deadline?.toIso8601String().split('T')[0],
-      'status': GoalStatus.active.name,
+      'status': GoalStatus.active.value,
     };
 
     final response = await _client
@@ -124,7 +124,7 @@ class FinancialGoalRepository {
 
     // Auto-completar si se alcanza la meta
     if (newAmount >= currentGoal.targetAmount) {
-      data['status'] = GoalStatus.completed.name;
+      data['status'] = GoalStatus.completed.value;
     }
 
     final response = await _client
@@ -147,7 +147,7 @@ class FinancialGoalRepository {
 
     final response = await _client
         .from('financial_goals')
-        .update({'status': status.name})
+        .update({'status': status.value})
         .eq('id', id)
         .eq('user_id', _userId!)
         .select()

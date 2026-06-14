@@ -1,11 +1,46 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/transaction.dart';
+import '../../services/fund_preferences_service.dart';
 import 'transaction_provider.dart';
 import 'fund_provider.dart';
 
+/// Provider para el servicio de persistencia de fondos
+final fundPreferencesServiceProvider = Provider<FundPreferencesService>((ref) {
+  return FundPreferencesService();
+});
+
+/// Notifier para manejar la selección de fondo con persistencia
+class SelectedFundNotifier extends StateNotifier<String?> {
+  final FundPreferencesService _prefsService;
+
+  SelectedFundNotifier(this._prefsService) : super(null) {
+    _loadSavedFund();
+  }
+
+  Future<void> _loadSavedFund() async {
+    final savedFundId = await _prefsService.getSelectedFundId();
+    if (savedFundId != null) {
+      state = savedFundId;
+    }
+  }
+
+  Future<void> setSelectedFund(String? fundId) async {
+    state = fundId;
+    await _prefsService.setSelectedFundId(fundId);
+  }
+
+  Future<void> clearSelection() async {
+    state = null;
+    await _prefsService.clearSelectedFund();
+  }
+}
+
 /// Provider para el fondo seleccionado actualmente
 /// null significa "Todos los fondos"
-final selectedFundIdProvider = StateProvider<String?>((ref) => null);
+final selectedFundIdProvider = StateNotifierProvider<SelectedFundNotifier, String?>((ref) {
+  final prefsService = ref.watch(fundPreferencesServiceProvider);
+  return SelectedFundNotifier(prefsService);
+});
 
 /// Provider que filtra transacciones por el fondo seleccionado
 final filteredTransactionsProvider = Provider<AsyncValue<List<Transaction>>>((ref) {

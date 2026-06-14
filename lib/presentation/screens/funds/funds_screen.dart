@@ -6,6 +6,7 @@ import '../../../app/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/fund.dart';
 import '../../providers/fund_provider.dart';
+import '../../providers/selected_fund_provider.dart';
 
 class FundsScreen extends ConsumerWidget {
   const FundsScreen({super.key});
@@ -18,6 +19,11 @@ class FundsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Mis Fondos'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: 'Ayuda',
+            onPressed: () => _showHelpDialog(context),
+          ),
           IconButton(
             icon: const Icon(Icons.swap_horiz),
             tooltip: 'Transferir',
@@ -89,6 +95,51 @@ class FundsScreen extends ConsumerWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _showHelpDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.lightbulb_outline, color: AppColors.warning),
+            const SizedBox(width: 8),
+            const Text('Como usar los Fondos'),
+          ],
+        ),
+        content: const SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Los fondos representan donde guardas tu dinero fisicamente.',
+                style: TextStyle(fontSize: 14),
+              ),
+              SizedBox(height: 16),
+              Text('Ejemplos:', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+              Text('  - Cuenta de ahorro en el banco'),
+              Text('  - Billetera con efectivo'),
+              Text('  - Alcancia para ahorros'),
+              SizedBox(height: 16),
+              Text('Consejos:', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+              Text('  - Usa transferencias para mover dinero entre fondos'),
+              Text('  - El selector del Dashboard filtra tus transacciones'),
+              Text('  - Siempre debes tener al menos un fondo'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Entendido'),
+          ),
+        ],
       ),
     );
   }
@@ -367,6 +418,8 @@ class FundsScreen extends ConsumerWidget {
 
   IconData _getFundIcon(FundType type) {
     switch (type) {
+      case FundType.general:
+        return Icons.account_balance_wallet;
       case FundType.bank:
         return Icons.account_balance;
       case FundType.cash:
@@ -378,12 +431,14 @@ class FundsScreen extends ConsumerWidget {
 
   Color _getFundColor(FundType type) {
     switch (type) {
+      case FundType.general:
+        return AppColors.primary;
       case FundType.bank:
         return AppColors.info;
       case FundType.cash:
         return AppColors.income;
       case FundType.savings:
-        return AppColors.primary;
+        return AppColors.warning;
     }
   }
 
@@ -578,6 +633,37 @@ class FundsScreen extends ConsumerWidget {
   }
 
   void _showDeleteConfirmation(BuildContext context, WidgetRef ref, Fund fund) {
+    // Verificar si es el único fondo
+    final fundsAsync = ref.read(fundNotifierProvider);
+    final funds = fundsAsync.valueOrNull ?? [];
+
+    if (funds.length <= 1) {
+      // No se puede eliminar el único fondo
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: AppColors.warning),
+              SizedBox(width: 8),
+              Text('No se puede eliminar'),
+            ],
+          ),
+          content: const Text(
+            'Debes tener al menos un fondo.\n\n'
+            'Crea otro fondo antes de eliminar este.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Entendido'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -590,7 +676,24 @@ class FundsScreen extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () async {
+              // Verificar si el fondo a eliminar es el seleccionado actualmente
+              final selectedFundId = ref.read(selectedFundIdProvider);
+              final isSelectedFund = selectedFundId == fund.id;
+
               final success = await ref.read(fundNotifierProvider.notifier).deleteFund(fund.id);
+
+              if (success && isSelectedFund) {
+                // Auto-seleccionar otro fondo o limpiar selección
+                final updatedFunds = ref.read(fundNotifierProvider).valueOrNull ?? [];
+                if (updatedFunds.isNotEmpty) {
+                  // Seleccionar el primer fondo disponible
+                  await ref.read(selectedFundIdProvider.notifier).setSelectedFund(updatedFunds.first.id);
+                } else {
+                  // Limpiar selección si no hay más fondos
+                  await ref.read(selectedFundIdProvider.notifier).clearSelection();
+                }
+              }
+
               if (context.mounted) {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(

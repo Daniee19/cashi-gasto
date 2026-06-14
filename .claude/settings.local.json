@@ -13,7 +13,10 @@
       "Bash(flutter pub:*)",
       "Bash(dart analyze:*)",
       "Bash(dart format:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(flutter run:*)",
+      "Bash(adb shell:*)",
+      "Bash(flutter clean:*)"
     ]
   }
 }

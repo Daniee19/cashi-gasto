@@ -5,9 +5,18 @@ enum CategoryType {
   income,
   expense;
 
+  String get value {
+    switch (this) {
+      case CategoryType.income:
+        return 'income';
+      case CategoryType.expense:
+        return 'expense';
+    }
+  }
+
   static CategoryType fromString(String value) {
     return CategoryType.values.firstWhere(
-      (e) => e.name == value,
+      (e) => e.value == value,
       orElse: () => CategoryType.expense,
     );
   }
@@ -58,7 +67,7 @@ class Category extends Equatable {
       'user_id': userId,
       'name': name,
       'description': description,
-      'type': type.name,
+      'type': type.value,
       'icon': icon,
       'color': color,
       'is_default': isDefault,

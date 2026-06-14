@@ -53,7 +53,7 @@ class BudgetRepository {
     final data = {
       'user_id': _userId,
       'category_id': categoryId,
-      'period': period.name,
+      'period': period.value,
       'amount_budgeted': amountBudgeted,
       'start_date': startDate.toIso8601String().split('T')[0],
       'end_date': endDate.toIso8601String().split('T')[0],

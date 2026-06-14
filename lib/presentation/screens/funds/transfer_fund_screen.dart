@@ -348,6 +348,8 @@ class _TransferFundScreenState extends ConsumerState<TransferFundScreen> {
 
   IconData _getFundIcon(FundType type) {
     switch (type) {
+      case FundType.general:
+        return Icons.account_balance_wallet;
       case FundType.bank:
         return Icons.account_balance;
       case FundType.cash:
@@ -359,12 +361,14 @@ class _TransferFundScreenState extends ConsumerState<TransferFundScreen> {
 
   Color _getFundColor(FundType type) {
     switch (type) {
+      case FundType.general:
+        return AppColors.primary;
       case FundType.bank:
         return AppColors.info;
       case FundType.cash:
         return AppColors.income;
       case FundType.savings:
-        return AppColors.primary;
+        return AppColors.warning;
     }
   }
 

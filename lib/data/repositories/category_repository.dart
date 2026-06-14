@@ -50,7 +50,7 @@ class CategoryRepository {
     final data = {
       'user_id': _userId,
       'name': name,
-      'type': type.name,
+      'type': type.value,
       'description': description,
       'icon': icon,
       'color': color,

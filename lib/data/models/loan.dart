@@ -4,9 +4,18 @@ enum LoanType {
   lent,
   borrowed;
 
+  String get value {
+    switch (this) {
+      case LoanType.lent:
+        return 'lent';
+      case LoanType.borrowed:
+        return 'borrowed';
+    }
+  }
+
   static LoanType fromString(String value) {
     return LoanType.values.firstWhere(
-      (e) => e.name == value,
+      (e) => e.value == value,
       orElse: () => LoanType.lent,
     );
   }
@@ -26,9 +35,20 @@ enum LoanStatus {
   paid,
   overdue;
 
+  String get value {
+    switch (this) {
+      case LoanStatus.pending:
+        return 'pending';
+      case LoanStatus.paid:
+        return 'paid';
+      case LoanStatus.overdue:
+        return 'overdue';
+    }
+  }
+
   static LoanStatus fromString(String value) {
     return LoanStatus.values.firstWhere(
-      (e) => e.name == value,
+      (e) => e.value == value,
       orElse: () => LoanStatus.pending,
     );
   }
@@ -88,10 +108,10 @@ class Loan extends Equatable {
       'user_id': userId,
       'contact_name': contactName,
       'amount': amount,
-      'loan_type': loanType.name,
+      'loan_type': loanType.value,
       'limit_date': limitDate?.toIso8601String().split('T')[0],
       'description': description,
-      'status': status.name,
+      'status': status.value,
       'created_at': createdAt.toIso8601String(),
     };
   }

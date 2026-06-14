@@ -1,19 +1,36 @@
 import 'package:equatable/equatable.dart';
 
 enum FundType {
+  general,
   bank,
   cash,
   savings;
 
+  /// Retorna el valor string del enum para almacenar en la base de datos
+  String get value {
+    switch (this) {
+      case FundType.general:
+        return 'general';
+      case FundType.bank:
+        return 'bank';
+      case FundType.cash:
+        return 'cash';
+      case FundType.savings:
+        return 'savings';
+    }
+  }
+
   static FundType fromString(String value) {
     return FundType.values.firstWhere(
-      (e) => e.name == value,
-      orElse: () => FundType.cash,
+      (e) => e.value == value,
+      orElse: () => FundType.general,
     );
   }
 
   String get displayName {
     switch (this) {
+      case FundType.general:
+        return 'General';
       case FundType.bank:
         return 'Banco';
       case FundType.cash:
@@ -60,7 +77,7 @@ class Fund extends Equatable {
       'id': id,
       'user_id': userId,
       'name': name,
-      'type': type.name,
+      'type': type.value,
       'balance': balance,
       'icon': icon,
       'created_at': createdAt.toIso8601String(),

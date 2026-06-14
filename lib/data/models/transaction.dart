@@ -5,9 +5,20 @@ enum TransactionType {
   expense,
   transfer;
 
+  String get value {
+    switch (this) {
+      case TransactionType.income:
+        return 'income';
+      case TransactionType.expense:
+        return 'expense';
+      case TransactionType.transfer:
+        return 'transfer';
+    }
+  }
+
   static TransactionType fromString(String value) {
     return TransactionType.values.firstWhere(
-      (e) => e.name == value,
+      (e) => e.value == value,
       orElse: () => TransactionType.expense,
     );
   }
@@ -29,10 +40,21 @@ enum TransactionMethod {
   card,
   transfer;
 
+  String get value {
+    switch (this) {
+      case TransactionMethod.cash:
+        return 'cash';
+      case TransactionMethod.card:
+        return 'card';
+      case TransactionMethod.transfer:
+        return 'transfer';
+    }
+  }
+
   static TransactionMethod fromString(String? value) {
     if (value == null) return TransactionMethod.cash;
     return TransactionMethod.values.firstWhere(
-      (e) => e.name == value,
+      (e) => e.value == value,
       orElse: () => TransactionMethod.cash,
     );
   }
@@ -99,8 +121,8 @@ class Transaction extends Equatable {
       'category_id': categoryId,
       'fund_id': fundId,
       'amount': amount,
-      'type': type.name,
-      'transaction_method': transactionMethod.name,
+      'type': type.value,
+      'transaction_method': transactionMethod.value,
       'transaction_date': transactionDate.toIso8601String().split('T')[0],
       'note': note,
       'receipt_image': receiptImage,

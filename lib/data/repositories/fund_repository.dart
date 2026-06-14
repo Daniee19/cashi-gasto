@@ -33,7 +33,7 @@ class FundRepository {
     final data = {
       'user_id': _userId,
       'name': name,
-      'type': type.name,
+      'type': type.value,
       'balance': balance,
       'icon': icon,
     };
@@ -69,7 +69,7 @@ class FundRepository {
 
     final data = {
       'name': name,
-      'type': type.name,
+      'type': type.value,
       'icon': icon,
     };
 
@@ -93,6 +93,43 @@ class FundRepository {
         .delete()
         .eq('id', id)
         .eq('user_id', _userId!);
+  }
+
+  /// Verifica si el usuario tiene al menos un fondo
+  Future<bool> hasFunds() async {
+    if (_userId == null) return false;
+
+    final response = await _client
+        .from('funds')
+        .select('id')
+        .eq('user_id', _userId!)
+        .limit(1);
+
+    return (response as List).isNotEmpty;
+  }
+
+  /// Crea el fondo por defecto para usuarios nuevos
+  Future<Fund> createDefaultFund() async {
+    if (_userId == null) throw Exception('Usuario no autenticado');
+
+    return addFund(
+      name: 'Fondo Principal',
+      type: FundType.general,
+      balance: 0,
+      icon: 'account_balance_wallet',
+    );
+  }
+
+  /// Obtiene el conteo de fondos del usuario
+  Future<int> getFundCount() async {
+    if (_userId == null) return 0;
+
+    final response = await _client
+        .from('funds')
+        .select('id')
+        .eq('user_id', _userId!);
+
+    return (response as List).length;
   }
 
   /// Transfiere dinero entre fondos

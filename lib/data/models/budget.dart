@@ -5,9 +5,20 @@ enum BudgetPeriod {
   monthly,
   yearly;
 
+  String get value {
+    switch (this) {
+      case BudgetPeriod.weekly:
+        return 'weekly';
+      case BudgetPeriod.monthly:
+        return 'monthly';
+      case BudgetPeriod.yearly:
+        return 'yearly';
+    }
+  }
+
   static BudgetPeriod fromString(String value) {
     return BudgetPeriod.values.firstWhere(
-      (e) => e.name == value,
+      (e) => e.value == value,
       orElse: () => BudgetPeriod.monthly,
     );
   }
@@ -63,7 +74,7 @@ class Budget extends Equatable {
       'id': id,
       'user_id': userId,
       'category_id': categoryId,
-      'period': period.name,
+      'period': period.value,
       'amount_budgeted': amountBudgeted,
       'start_date': startDate.toIso8601String().split('T')[0],
       'end_date': endDate.toIso8601String().split('T')[0],

@@ -6,9 +6,21 @@ import '../../../core/constants/app_colors.dart';
 import '../../../data/repositories/reports_repository.dart';
 import '../../../services/pdf_export_service.dart';
 import '../../providers/reports_provider.dart';
+import '../../widgets/charts/charts.dart';
 
 class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
+
+  double _getHeatmapHeight(ReportPeriod period) {
+    switch (period) {
+      case ReportPeriod.week:
+        return 220;
+      case ReportPeriod.month:
+        return 380;
+      case ReportPeriod.year:
+        return 320;
+    }
+  }
 
   Future<void> _exportToPdf(BuildContext context, WidgetRef ref) async {
     final summaryAsync = ref.read(reportSummaryProvider);
@@ -69,6 +81,10 @@ class ReportsScreen extends ConsumerWidget {
     final summaryAsync = ref.watch(reportSummaryProvider);
     final breakdownAsync = ref.watch(categoryBreakdownProvider);
     final trendsAsync = ref.watch(monthlyTrendsProvider);
+    // Providers avanzados
+    final cashFlowAsync = ref.watch(cashFlowProvider);
+    final savingsAsync = ref.watch(savingsIndicatorProvider);
+    final dailyAmountsAsync = ref.watch(dailyAmountsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -86,6 +102,9 @@ class ReportsScreen extends ConsumerWidget {
           ref.invalidate(reportSummaryProvider);
           ref.invalidate(categoryBreakdownProvider);
           ref.invalidate(monthlyTrendsProvider);
+          ref.invalidate(cashFlowProvider);
+          ref.invalidate(savingsIndicatorProvider);
+          ref.invalidate(dailyAmountsProvider);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -141,6 +160,124 @@ class ReportsScreen extends ConsumerWidget {
                 data: (trends) => trends.isEmpty
                     ? const _EmptyCard(message: 'No hay datos suficientes')
                     : _TrendsLineChart(trends: trends),
+              ),
+              const SizedBox(height: 24),
+
+              // ============ REPORTES AVANZADOS ============
+
+              // Flujo de caja
+              Text(
+                'Flujo de caja',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Evolucion de tu saldo acumulado',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textMuted,
+                ),
+              ),
+              const SizedBox(height: 12),
+              cashFlowAsync.when(
+                loading: () => const _LoadingCard(height: 280),
+                error: (e, _) => _ErrorCard(message: e.toString()),
+                data: (cashFlow) => cashFlow.isEmpty
+                    ? const _EmptyCard(message: 'No hay datos para mostrar')
+                    : Container(
+                        height: 280,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 10,
+                            ),
+                          ],
+                        ),
+                        child: CashFlowAreaChart(data: cashFlow),
+                      ),
+              ),
+              const SizedBox(height: 24),
+
+              // Indicador de ahorro
+              Text(
+                'Resumen de ahorro',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Como distribuyes tus ingresos',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textMuted,
+                ),
+              ),
+              const SizedBox(height: 12),
+              savingsAsync.when(
+                loading: () => const _LoadingCard(height: 380),
+                error: (e, _) => _ErrorCard(message: e.toString()),
+                data: (savings) => (savings.totalIncome == 0 && savings.totalExpense == 0)
+                    ? const _EmptyCard(message: 'No hay datos para mostrar')
+                    : Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 10,
+                            ),
+                          ],
+                        ),
+                        child: SavingsGaugeChart(data: savings, size: 180),
+                      ),
+              ),
+              const SizedBox(height: 24),
+
+              // Heatmap de gastos
+              Text(
+                'Mapa de actividad',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Intensidad de gastos por dia',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textMuted,
+                ),
+              ),
+              const SizedBox(height: 12),
+              dailyAmountsAsync.when(
+                loading: () => const _LoadingCard(height: 320),
+                error: (e, _) => _ErrorCard(message: e.toString()),
+                data: (dailyAmounts) => dailyAmounts.isEmpty
+                    ? const _EmptyCard(message: 'No hay datos para mostrar')
+                    : Container(
+                        height: _getHeatmapHeight(selectedPeriod),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 10,
+                            ),
+                          ],
+                        ),
+                        child: FinancialHeatmap(
+                          data: dailyAmounts,
+                          period: selectedPeriod,
+                        ),
+                      ),
               ),
               const SizedBox(height: 20),
             ],

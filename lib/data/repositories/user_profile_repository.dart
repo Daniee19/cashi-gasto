@@ -31,7 +31,7 @@ class UserProfileRepository {
     };
 
     if (fullName != null) data['full_name'] = fullName;
-    if (helpMode != null) data['help_mode'] = helpMode.name;
+    if (helpMode != null) data['help_mode'] = helpMode.value;
     if (profilePhoto != null) data['profile_photo'] = profilePhoto;
 
     final response = await _client

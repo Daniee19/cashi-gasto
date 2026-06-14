@@ -8,6 +8,7 @@ import '../../../data/models/fund.dart';
 import '../../../data/models/transaction.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/fund_provider.dart';
+import '../../providers/selected_fund_provider.dart';
 import '../../providers/transaction_provider.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
@@ -28,6 +29,28 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   Category? _selectedCategory;
   Fund? _selectedFund;
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-seleccionar el fondo activo después del primer frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoSelectFund();
+    });
+  }
+
+  void _autoSelectFund() {
+    final selectedFundId = ref.read(selectedFundIdProvider);
+    if (selectedFundId != null) {
+      final fundsAsync = ref.read(fundsProvider);
+      fundsAsync.whenData((funds) {
+        final selectedFund = funds.where((f) => f.id == selectedFundId).firstOrNull;
+        if (selectedFund != null && mounted) {
+          setState(() => _selectedFund = selectedFund);
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -295,6 +318,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
   IconData _getFundIcon(FundType type) {
     switch (type) {
+      case FundType.general:
+        return Icons.account_balance_wallet;
       case FundType.bank:
         return Icons.account_balance;
       case FundType.cash:
@@ -445,9 +470,22 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                     color: AppColors.info,
                   ),
                 ),
-                title: const Text(AppStrings.fund),
+                title: Row(
+                  children: [
+                    const Text(AppStrings.fund),
+                    const SizedBox(width: 4),
+                    Tooltip(
+                      message: 'Los fondos te ayudan a organizar tu dinero\nen diferentes cuentas o billeteras',
+                      child: Icon(
+                        Icons.help_outline,
+                        size: 16,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
                 subtitle: Text(
-                  _selectedFund?.name ?? 'Seleccionar cuenta (opcional)',
+                  _selectedFund?.name ?? 'Seleccionar cuenta',
                   style: TextStyle(
                     color: _selectedFund != null ? null : AppColors.textMuted,
                   ),

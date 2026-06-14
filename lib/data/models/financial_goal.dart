@@ -5,9 +5,20 @@ enum GoalStatus {
   completed,
   cancelled;
 
+  String get value {
+    switch (this) {
+      case GoalStatus.active:
+        return 'active';
+      case GoalStatus.completed:
+        return 'completed';
+      case GoalStatus.cancelled:
+        return 'cancelled';
+    }
+  }
+
   static GoalStatus fromString(String value) {
     return GoalStatus.values.firstWhere(
-      (e) => e.name == value,
+      (e) => e.value == value,
       orElse: () => GoalStatus.active,
     );
   }
@@ -70,7 +81,7 @@ class FinancialGoal extends Equatable {
       'target_amount': targetAmount,
       'current_amount': currentAmount,
       'deadline': deadline?.toIso8601String().split('T')[0],
-      'status': status.name,
+      'status': status.value,
       'created_at': createdAt.toIso8601String(),
     };
   }

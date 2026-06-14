@@ -5,6 +5,7 @@ import '../../../app/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/fund_provider.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -44,11 +45,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
 
     if (mounted) {
-      setState(() => _isLoading = false);
-
       if (result.isSuccess) {
+        // Crear el fondo por defecto para el nuevo usuario
+        try {
+          final fundRepository = ref.read(fundRepositoryProvider);
+          await fundRepository.createDefaultFund();
+          // Refrescar la lista de fondos
+          ref.invalidate(fundNotifierProvider);
+        } catch (e) {
+          // Si falla la creación del fondo, no bloquear el registro
+          debugPrint('Error al crear fondo por defecto: $e');
+        }
+
+        setState(() => _isLoading = false);
         context.go(AppRoutes.onboarding);
       } else {
+        setState(() => _isLoading = false);
         _showErrorDialog(result.errorMessage ?? 'Error desconocido');
       }
     }

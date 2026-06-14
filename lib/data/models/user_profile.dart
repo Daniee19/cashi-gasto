@@ -6,9 +6,22 @@ enum HelpMode {
   business,
   support;
 
+  String get value {
+    switch (this) {
+      case HelpMode.general:
+        return 'general';
+      case HelpMode.youth:
+        return 'youth';
+      case HelpMode.business:
+        return 'business';
+      case HelpMode.support:
+        return 'support';
+    }
+  }
+
   static HelpMode fromString(String value) {
     return HelpMode.values.firstWhere(
-      (e) => e.name == value,
+      (e) => e.value == value,
       orElse: () => HelpMode.general,
     );
   }
@@ -50,7 +63,7 @@ class UserProfile extends Equatable {
       'id': id,
       'full_name': fullName,
       'email': email,
-      'help_mode': helpMode.name,
+      'help_mode': helpMode.value,
       'profile_photo': profilePhoto,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),

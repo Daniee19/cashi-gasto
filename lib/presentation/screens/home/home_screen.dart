@@ -511,74 +511,169 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           color: AppColors.primary.withOpacity(0.1),
         ),
       ),
-      child: fundsAsync.when(
-        loading: () => const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8),
-          child: Text('Cargando fondos...'),
-        ),
-        error: (_, __) => const Padding(
-          padding: EdgeInsets.symmetric(vertical: 8),
-          child: Text('Error al cargar fondos'),
-        ),
-        data: (funds) {
-          return DropdownButtonHideUnderline(
-            child: DropdownButton<String?>(
-              value: selectedFundId,
-              isExpanded: true,
-              icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.primary),
-              hint: Row(
-                children: [
-                  Icon(Icons.account_balance_wallet,
-                       size: 20,
-                       color: AppColors.primary.withOpacity(0.7)),
-                  const SizedBox(width: 8),
-                  const Text('Todos los fondos'),
-                ],
+      child: Row(
+        children: [
+          Expanded(
+            child: fundsAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text('Cargando fondos...'),
               ),
-              items: [
-                DropdownMenuItem<String?>(
-                  value: null,
-                  child: Row(
-                    children: [
-                      Icon(Icons.all_inclusive,
-                           size: 20,
-                           color: AppColors.primary.withOpacity(0.7)),
-                      const SizedBox(width: 8),
-                      const Text('Todos los fondos'),
-                    ],
-                  ),
-                ),
-                ...funds.map((fund) {
-                  final icon = _getFundIcon(fund.type.name);
-                  return DropdownMenuItem<String?>(
-                    value: fund.id,
-                    child: Row(
+              error: (_, __) => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text('Error al cargar fondos'),
+              ),
+              data: (funds) {
+                return DropdownButtonHideUnderline(
+                  child: DropdownButton<String?>(
+                    value: selectedFundId,
+                    isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.primary),
+                    hint: Row(
                       children: [
-                        Icon(icon, size: 20, color: AppColors.primary.withOpacity(0.7)),
+                        Icon(Icons.account_balance_wallet,
+                             size: 20,
+                             color: AppColors.primary.withOpacity(0.7)),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            fund.name,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
+                        const Text('Todos los fondos'),
                       ],
                     ),
-                  );
-                }),
-              ],
-              onChanged: (value) {
-                ref.read(selectedFundIdProvider.notifier).state = value;
+                    items: [
+                      DropdownMenuItem<String?>(
+                        value: null,
+                        child: Row(
+                          children: [
+                            Icon(Icons.all_inclusive,
+                                 size: 20,
+                                 color: AppColors.primary.withOpacity(0.7)),
+                            const SizedBox(width: 8),
+                            const Text('Todos los fondos'),
+                          ],
+                        ),
+                      ),
+                      ...funds.map((fund) {
+                        final icon = _getFundIcon(fund.type.value);
+                        return DropdownMenuItem<String?>(
+                          value: fund.id,
+                          child: Row(
+                            children: [
+                              Icon(icon, size: 20, color: AppColors.primary.withOpacity(0.7)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  fund.name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+                    onChanged: (value) {
+                      ref.read(selectedFundIdProvider.notifier).setSelectedFund(value);
+                    },
+                  ),
+                );
               },
             ),
-          );
-        },
+          ),
+          // Icono de ayuda contextual
+          Tooltip(
+            message: 'Los fondos te permiten organizar tu dinero\nen diferentes cuentas (banco, efectivo, ahorros).\n\nSelecciona un fondo para filtrar transacciones\no elige "Todos los fondos" para ver todo.',
+            child: IconButton(
+              icon: Icon(
+                Icons.help_outline,
+                size: 20,
+                color: AppColors.primary.withOpacity(0.6),
+              ),
+              onPressed: () {
+                _showFundHelpDialog(context);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFundHelpDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.account_balance_wallet, color: AppColors.primary),
+            const SizedBox(width: 8),
+            const Text('Acerca de los Fondos'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Los fondos te ayudan a organizar tu dinero en diferentes cuentas o billeteras.',
+              style: TextStyle(fontSize: 14),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Tipos de fondos:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.account_balance_wallet, size: 20, color: AppColors.primary),
+                SizedBox(width: 8),
+                Text('General - Uso multiple'),
+              ],
+            ),
+            SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.account_balance, size: 20, color: AppColors.info),
+                SizedBox(width: 8),
+                Text('Banco - Cuentas bancarias'),
+              ],
+            ),
+            SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.payments, size: 20, color: AppColors.income),
+                SizedBox(width: 8),
+                Text('Efectivo - Dinero en mano'),
+              ],
+            ),
+            SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.savings, size: 20, color: AppColors.warning),
+                SizedBox(width: 8),
+                Text('Ahorros - Dinero apartado'),
+              ],
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Usa el selector para filtrar transacciones por fondo o ver todas juntas.',
+              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Entendido'),
+          ),
+        ],
       ),
     );
   }
 
   IconData _getFundIcon(String type) {
     switch (type) {
+      case 'general':
+        return Icons.account_balance_wallet;
       case 'bank':
         return Icons.account_balance;
       case 'cash':

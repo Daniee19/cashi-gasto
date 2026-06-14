@@ -42,11 +42,11 @@ class TransactionRepository {
     final data = {
       'user_id': userId,
       'amount': amount,
-      'type': type.name,
+      'type': type.value,
       'transaction_date': transactionDate.toIso8601String().split('T')[0],
       'category_id': categoryId,
       'fund_id': fundId,
-      'transaction_method': transactionMethod?.name ?? 'cash',
+      'transaction_method': transactionMethod?.value ?? 'cash',
       'note': note,
       'receipt_image': receiptImage,
     };
