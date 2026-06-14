@@ -92,11 +92,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.primary.withOpacity(0.1),
                           shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.pets,
-                          size: 50,
-                          color: AppColors.primary,
+                          image: DecorationImage(
+                            image: AssetImage('assets/images/cat-bienvenida.png'),
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16),

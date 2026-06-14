@@ -12,6 +12,8 @@ import '../../providers/user_profile_provider.dart';
 import '../../providers/fund_provider.dart';
 import '../../providers/selected_fund_provider.dart';
 import '../../../services/budget_alert_service.dart';
+import '../../widgets/cashito_welcome.dart';
+import '../../providers/alert_provider.dart';
 import '../more/more_screen.dart';
 import '../transactions/transaction_list_screen.dart';
 import '../budgets/budgets_screen.dart';
@@ -25,6 +27,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _currentIndex = 0;
+  bool _showWelcome = false;
 
   @override
   void initState() {
@@ -32,26 +35,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // Initialize budget alert monitoring
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(budgetAlertTriggerProvider);
+      _checkWelcome();
     });
+  }
+
+  Future<void> _checkWelcome() async {
+    final wasShown = await CashitoWelcome.wasShown();
+    if (!wasShown && mounted) {
+      setState(() => _showWelcome = true);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: [
-          _buildHomeContent(context),
-          const TransactionListScreen(showAppBar: false),
-          const BudgetsScreen(showAppBar: false),
-          const MoreScreen(),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push(AppRoutes.addTransaction),
-        child: const Icon(Icons.add),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+    return Stack(
+      children: [
+        Scaffold(
+          body: IndexedStack(
+            index: _currentIndex,
+            children: [
+              _buildHomeContent(context),
+              const TransactionListScreen(showAppBar: false),
+              const BudgetsScreen(showAppBar: false),
+              const MoreScreen(),
+            ],
+          ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () => context.push(AppRoutes.addTransaction),
+            child: const Icon(Icons.add),
+          ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
@@ -78,6 +91,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ],
       ),
+        ),
+
+        // Cashito Welcome Overlay
+        if (_showWelcome)
+          CashitoWelcome(
+            onDismiss: () => setState(() => _showWelcome = false),
+          ),
+      ],
     );
   }
 
@@ -132,15 +153,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   Row(
                     children: [
-                      IconButton(
-                        onPressed: () {},
-                        icon: const Icon(Icons.notifications_outlined),
-                      ),
+                      _buildNotificationBell(context),
+                      const SizedBox(width: 4),
                       CircleAvatar(
                         backgroundColor: AppColors.primary.withOpacity(0.1),
-                        child: const Icon(
-                          Icons.person,
-                          color: AppColors.primary,
+                        child: Image.asset(
+                          'assets/images/cat-saludando.png',
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.contain,
                         ),
                       ),
                     ],
@@ -149,7 +170,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Fund Selector
+              // Selector de Fondos
               _buildFundSelector(context, fundsAsync, selectedFundId),
               const SizedBox(height: 16),
 
@@ -163,54 +184,54 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(height: 24),
 
               // Cashito Message
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: AppColors.primary.withOpacity(0.1),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.pets,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            AppStrings.mascotName,
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
-                                ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            AppStrings.cashitoGreetings[0],
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.textSecondary,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              // Container(
+              //   padding: const EdgeInsets.all(16),
+              //   decoration: BoxDecoration(
+              //     color: AppColors.primary.withOpacity(0.05),
+              //     borderRadius: BorderRadius.circular(16),
+              //     border: Border.all(
+              //       color: AppColors.primary.withOpacity(0.1),
+              //     ),
+              //   ),
+              //   child: Row(
+              //     children: [
+              //       Container(
+              //         width: 48,
+              //         height: 48,
+              //         decoration: BoxDecoration(
+              //           color: AppColors.primary.withOpacity(0.1),
+              //           shape: BoxShape.circle,
+              //           image: const DecorationImage(
+              //             image: AssetImage('assets/images/cat-saludando.png'),
+              //             fit: BoxFit.contain,
+              //           ),
+              //         ),                   
+              //       ),
+              //       const SizedBox(width: 12),
+              //       Expanded(
+              //         child: Column(
+              //           crossAxisAlignment: CrossAxisAlignment.start,
+              //           children: [
+              //             Text(
+              //               AppStrings.mascotName,
+              //               style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              //                     fontWeight: FontWeight.bold,
+              //                     color: AppColors.primary,
+              //                   ),
+              //             ),
+              //             const SizedBox(height: 2),
+              //             Text(
+              //               AppStrings.cashitoGreetings[0],
+              //               style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              //                     color: AppColors.textSecondary,
+              //                   ),
+              //             ),
+              //           ],
+              //         ),
+              //       ),
+              //     ],
+              //   ),
+              // ),
               const SizedBox(height: 24),
 
               // Quick Actions
@@ -341,11 +362,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.pets,
-                  color: Colors.white,
-                  size: 20,
+                  image: const DecorationImage(
+                    image: AssetImage('assets/images/cat-saludando.png'),
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -402,6 +422,60 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  Widget _buildNotificationBell(BuildContext context) {
+    final unreadAlertsAsync = ref.watch(unreadAlertsProvider);
+
+    return unreadAlertsAsync.when(
+      loading: () => IconButton(
+        onPressed: () => context.push(AppRoutes.alerts),
+        icon: const Icon(Icons.notifications_outlined),
+      ),
+      error: (_, __) => IconButton(
+        onPressed: () => context.push(AppRoutes.alerts),
+        icon: const Icon(Icons.notifications_outlined),
+      ),
+      data: (unreadAlerts) {
+        final count = unreadAlerts.length;
+
+        return Stack(
+          children: [
+            IconButton(
+              onPressed: () => context.push(AppRoutes.alerts),
+              icon: Icon(
+                count > 0 ? Icons.notifications : Icons.notifications_outlined,
+              ),
+            ),
+            if (count > 0)
+              Positioned(
+                right: 6,
+                top: 6,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: AppColors.expense,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  child: Text(
+                    count > 9 ? '9+' : count.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildEmptyTransactions(BuildContext context) {
     return Center(
       child: Column(
@@ -430,6 +504,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  /// Convierte nombres de iconos Material a emojis
+  String _getEmoji(String? iconName, bool isExpense) {
+    const iconToEmoji = {
+      'restaurant': '🍔',
+      'directions_car': '🚗',
+      'movie': '🎬',
+      'shopping_bag': '🛍️',
+      'medical_services': '🏥',
+      'school': '📚',
+      'receipt': '🧾',
+      'more_horiz': '📦',
+      'payments': '💵',
+      'trending_up': '📈',
+      'card_giftcard': '🎁',
+      'home': '🏠',
+      'pets': '🐾',
+      'fitness_center': '💪',
+      'flight': '✈️',
+      'phone': '📱',
+      'wifi': '📶',
+      'water_drop': '💧',
+      'bolt': '⚡',
+    };
+
+    if (iconName == null) return isExpense ? '💸' : '💰';
+    if (iconName.contains(RegExp(r'[\u{1F300}-\u{1F9FF}]', unicode: true))) return iconName;
+    return iconToEmoji[iconName] ?? (isExpense ? '💸' : '💰');
+  }
+
   Widget _buildRecentTransactionsList(
     BuildContext context,
     List<Transaction> transactions,
@@ -441,6 +544,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         final isExpense = transaction.type == TransactionType.expense;
         final color = isExpense ? AppColors.expense : AppColors.income;
         final sign = isExpense ? '-' : '+';
+        final emoji = _getEmoji(category?.icon, isExpense);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
@@ -464,15 +568,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Center(
-                child: category != null
-                    ? Text(
-                        category.icon ?? (isExpense ? '💸' : '💰'),
-                        style: const TextStyle(fontSize: 22),
-                      )
-                    : Icon(
-                        isExpense ? Icons.arrow_upward : Icons.arrow_downward,
-                        color: color,
-                      ),
+                child: Text(
+                  emoji,
+                  style: const TextStyle(fontSize: 22),
+                ),
               ),
             ),
             title: Text(
@@ -524,9 +623,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: Text('Error al cargar fondos'),
               ),
               data: (funds) {
+                // Validar que el fondo seleccionado existe en la lista
+                final validSelectedFundId = selectedFundId != null &&
+                        funds.any((f) => f.id == selectedFundId)
+                    ? selectedFundId
+                    : null;
+
+                // Si el fondo guardado no existe, limpiar la selección
+                if (selectedFundId != null && validSelectedFundId == null) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    ref.read(selectedFundIdProvider.notifier).clearSelection();
+                  });
+                }
+
                 return DropdownButtonHideUnderline(
                   child: DropdownButton<String?>(
-                    value: selectedFundId,
+                    value: validSelectedFundId,
                     isExpanded: true,
                     icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.primary),
                     hint: Row(

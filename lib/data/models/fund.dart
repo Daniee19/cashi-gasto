@@ -48,6 +48,7 @@ class Fund extends Equatable {
   final FundType type;
   final double balance;
   final String? icon;
+  final bool isPrimary;
   final DateTime createdAt;
 
   const Fund({
@@ -57,6 +58,7 @@ class Fund extends Equatable {
     required this.type,
     this.balance = 0,
     this.icon,
+    this.isPrimary = false,
     required this.createdAt,
   });
 
@@ -68,6 +70,7 @@ class Fund extends Equatable {
       type: FundType.fromString(json['type'] as String),
       balance: (json['balance'] as num?)?.toDouble() ?? 0,
       icon: json['icon'] as String?,
+      isPrimary: json['is_primary'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -80,6 +83,7 @@ class Fund extends Equatable {
       'type': type.value,
       'balance': balance,
       'icon': icon,
+      'is_primary': isPrimary,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -91,6 +95,7 @@ class Fund extends Equatable {
     FundType? type,
     double? balance,
     String? icon,
+    bool? isPrimary,
     DateTime? createdAt,
   }) {
     return Fund(
@@ -100,10 +105,11 @@ class Fund extends Equatable {
       type: type ?? this.type,
       balance: balance ?? this.balance,
       icon: icon ?? this.icon,
+      isPrimary: isPrimary ?? this.isPrimary,
       createdAt: createdAt ?? this.createdAt,
     );
   }
 
   @override
-  List<Object?> get props => [id, userId, name, type, balance, icon, createdAt];
+  List<Object?> get props => [id, userId, name, type, balance, icon, isPrimary, createdAt];
 }

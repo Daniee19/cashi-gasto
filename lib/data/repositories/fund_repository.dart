@@ -27,6 +27,7 @@ class FundRepository {
     required FundType type,
     double balance = 0,
     String? icon,
+    bool isPrimary = false,
   }) async {
     if (_userId == null) throw Exception('Usuario no autenticado');
 
@@ -36,6 +37,7 @@ class FundRepository {
       'type': type.value,
       'balance': balance,
       'icon': icon,
+      'is_primary': isPrimary,
     };
 
     final response = await _client
@@ -117,6 +119,7 @@ class FundRepository {
       type: FundType.general,
       balance: 0,
       icon: 'account_balance_wallet',
+      isPrimary: true,
     );
   }
 
@@ -130,6 +133,22 @@ class FundRepository {
         .eq('user_id', _userId!);
 
     return (response as List).length;
+  }
+
+  /// Obtiene el fondo principal del usuario
+  Future<Fund?> getPrimaryFund() async {
+    if (_userId == null) return null;
+
+    final response = await _client
+        .from('funds')
+        .select()
+        .eq('user_id', _userId!)
+        .eq('is_primary', true)
+        .limit(1);
+
+    final list = response as List;
+    if (list.isEmpty) return null;
+    return Fund.fromJson(list.first);
   }
 
   /// Transfiere dinero entre fondos

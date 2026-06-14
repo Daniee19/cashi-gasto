@@ -40,16 +40,25 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
   }
 
   void _autoSelectFund() {
-    final selectedFundId = ref.read(selectedFundIdProvider);
-    if (selectedFundId != null) {
-      final fundsAsync = ref.read(fundsProvider);
-      fundsAsync.whenData((funds) {
+    final fundsAsync = ref.read(fundsProvider);
+    fundsAsync.whenData((funds) {
+      if (!mounted || funds.isEmpty) return;
+
+      // Si solo hay un fondo, seleccionarlo automáticamente
+      if (funds.length == 1) {
+        setState(() => _selectedFund = funds.first);
+        return;
+      }
+
+      // Si hay un fondo seleccionado en el home, usarlo
+      final selectedFundId = ref.read(selectedFundIdProvider);
+      if (selectedFundId != null) {
         final selectedFund = funds.where((f) => f.id == selectedFundId).firstOrNull;
-        if (selectedFund != null && mounted) {
+        if (selectedFund != null) {
           setState(() => _selectedFund = selectedFund);
         }
-      });
-    }
+      }
+    });
   }
 
   @override
@@ -78,6 +87,16 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Selecciona una categoria'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    if (_selectedFund == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selecciona un fondo'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -453,7 +472,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               ),
               const Divider(),
 
-              // Fund Selector
+              // Fund Selector (obligatorio)
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Container(
@@ -473,6 +492,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 title: Row(
                   children: [
                     const Text(AppStrings.fund),
+                    const Text(' *', style: TextStyle(color: Colors.red)),
                     const SizedBox(width: 4),
                     Tooltip(
                       message: 'Los fondos te ayudan a organizar tu dinero\nen diferentes cuentas o billeteras',
@@ -485,7 +505,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   ],
                 ),
                 subtitle: Text(
-                  _selectedFund?.name ?? 'Seleccionar cuenta',
+                  _selectedFund?.name ?? 'Seleccionar cuenta (requerido)',
                   style: TextStyle(
                     color: _selectedFund != null ? null : AppColors.textMuted,
                   ),

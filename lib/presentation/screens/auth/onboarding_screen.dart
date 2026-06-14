@@ -41,11 +41,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.primary.withOpacity(0.1),
                         shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.pets,
-                        size: 40,
-                        color: AppColors.primary,
+                        image: const DecorationImage(
+                          image: AssetImage('assets/images/cat-metas.png'),
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),

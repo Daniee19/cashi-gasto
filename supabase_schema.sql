@@ -34,9 +34,10 @@ CREATE TABLE "funds" (
     "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     "name" VARCHAR(100) NOT NULL,
-    "type" VARCHAR(20) NOT NULL, -- 'bank', 'cash', 'savings'
+    "type" VARCHAR(20) NOT NULL, -- 'bank', 'cash', 'savings', 'general'
     "balance" DECIMAL(15,2) DEFAULT 0,
     "icon" VARCHAR(50),
+    "is_primary" BOOLEAN DEFAULT FALSE,
     "created_at" TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -341,6 +342,15 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- =====================================================
+-- ACTUALIZACIÓN PARA AGREGAR UN CAMPO AL FONDO (funds)
+-- =====================================================
+  -- Agregar columna is_primary a la tabla funds
+  ALTER TABLE funds ADD COLUMN IF NOT EXISTS is_primary BOOLEAN DEFAULT FALSE;
+
+  -- Marcar fondos existentes llamados "Fondo Principal" como primarios
+  UPDATE funds SET is_primary = TRUE WHERE name = 'Fondo Principal';
 
 -- =====================================================
 -- FIN DEL SCHEMA
