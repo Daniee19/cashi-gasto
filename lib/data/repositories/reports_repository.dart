@@ -11,15 +11,30 @@ class ReportsRepository {
   Future<ReportSummary> getReportSummary({
     required DateTime startDate,
     required DateTime endDate,
+    String? fundId,
+    MovementType movementType = MovementType.both,
   }) async {
     if (_userId == null) throw Exception('Usuario no autenticado');
 
-    final response = await _client
+    var query = _client
         .from('transactions')
         .select('amount, type')
         .eq('user_id', _userId!)
         .gte('transaction_date', startDate.toIso8601String().split('T')[0])
         .lte('transaction_date', endDate.toIso8601String().split('T')[0]);
+
+    if (fundId != null) {
+      query = query.eq('fund_id', fundId);
+    }
+
+    // Filter by movement type
+    if (movementType == MovementType.income) {
+      query = query.eq('type', 'income');
+    } else if (movementType == MovementType.expense) {
+      query = query.eq('type', 'expense');
+    }
+
+    final response = await query;
 
     double totalIncome = 0;
     double totalExpense = 0;
@@ -47,17 +62,31 @@ class ReportsRepository {
   Future<List<CategoryBreakdown>> getCategoryBreakdown({
     required DateTime startDate,
     required DateTime endDate,
+    String? fundId,
+    MovementType movementType = MovementType.expense,
   }) async {
     if (_userId == null) throw Exception('Usuario no autenticado');
 
-    // Get all expense transactions with category
-    final transactionsResponse = await _client
+    // Get transactions with category
+    var query = _client
         .from('transactions')
-        .select('amount, category_id')
+        .select('amount, category_id, type')
         .eq('user_id', _userId!)
-        .eq('type', 'expense')
         .gte('transaction_date', startDate.toIso8601String().split('T')[0])
         .lte('transaction_date', endDate.toIso8601String().split('T')[0]);
+
+    if (fundId != null) {
+      query = query.eq('fund_id', fundId);
+    }
+
+    // Filter by movement type
+    if (movementType == MovementType.income) {
+      query = query.eq('type', 'income');
+    } else if (movementType == MovementType.expense) {
+      query = query.eq('type', 'expense');
+    }
+
+    final transactionsResponse = await query;
 
     // Group by category
     final Map<String, double> categoryTotals = {};
@@ -105,18 +134,23 @@ class ReportsRepository {
   }
 
   /// Get monthly trends for the last N months
-  Future<List<MonthlyTrend>> getMonthlyTrends({int months = 6}) async {
+  Future<List<MonthlyTrend>> getMonthlyTrends({int months = 6, String? fundId}) async {
     if (_userId == null) throw Exception('Usuario no autenticado');
 
     final now = DateTime.now();
     final startDate = DateTime(now.year, now.month - months + 1, 1);
 
-    final response = await _client
+    var query = _client
         .from('transactions')
         .select('amount, type, transaction_date')
         .eq('user_id', _userId!)
-        .gte('transaction_date', startDate.toIso8601String().split('T')[0])
-        .order('transaction_date');
+        .gte('transaction_date', startDate.toIso8601String().split('T')[0]);
+
+    if (fundId != null) {
+      query = query.eq('fund_id', fundId);
+    }
+
+    final response = await query.order('transaction_date');
 
     // Group by month
     final Map<String, MonthlyData> monthlyData = {};
@@ -166,16 +200,30 @@ class ReportsRepository {
   Future<List<DailyAmount>> getDailyAmounts({
     required DateTime startDate,
     required DateTime endDate,
+    String? fundId,
+    MovementType movementType = MovementType.both,
   }) async {
     if (_userId == null) throw Exception('Usuario no autenticado');
 
-    final response = await _client
+    var query = _client
         .from('transactions')
         .select('amount, type, transaction_date')
         .eq('user_id', _userId!)
         .gte('transaction_date', startDate.toIso8601String().split('T')[0])
-        .lte('transaction_date', endDate.toIso8601String().split('T')[0])
-        .order('transaction_date');
+        .lte('transaction_date', endDate.toIso8601String().split('T')[0]);
+
+    if (fundId != null) {
+      query = query.eq('fund_id', fundId);
+    }
+
+    // Filter by movement type
+    if (movementType == MovementType.income) {
+      query = query.eq('type', 'income');
+    } else if (movementType == MovementType.expense) {
+      query = query.eq('type', 'expense');
+    }
+
+    final response = await query.order('transaction_date');
 
     // Inicializar mapa con todas las fechas en el rango
     final Map<String, DailyAmount> dailyMap = {};
@@ -218,10 +266,14 @@ class ReportsRepository {
     required DateTime startDate,
     required DateTime endDate,
     double initialBalance = 0,
+    String? fundId,
+    MovementType movementType = MovementType.both,
   }) async {
     final dailyAmounts = await getDailyAmounts(
       startDate: startDate,
       endDate: endDate,
+      fundId: fundId,
+      movementType: movementType,
     );
 
     final List<CashFlowPoint> cashFlow = [];
@@ -246,6 +298,7 @@ class ReportsRepository {
   /// Obtiene tendencias adaptadas al período seleccionado
   Future<List<TrendPoint>> getTrendsByPeriod({
     required ReportPeriod period,
+    String? fundId,
   }) async {
     if (_userId == null) throw Exception('Usuario no autenticado');
 
@@ -258,6 +311,7 @@ class ReportsRepository {
         final dailyAmounts = await getDailyAmounts(
           startDate: dateRange.start,
           endDate: dateRange.end,
+          fundId: fundId,
         );
         return dailyAmounts.map((d) => TrendPoint(
           date: d.date,
@@ -268,16 +322,16 @@ class ReportsRepository {
 
       case ReportPeriod.month:
         // Tendencia semanal del mes
-        return await _getWeeklyTrendsForMonth(dateRange.start, dateRange.end);
+        return await _getWeeklyTrendsForMonth(dateRange.start, dateRange.end, fundId: fundId);
 
       case ReportPeriod.year:
         // Tendencia mensual del año
-        return await _getMonthlyTrendsForYear(now.year);
+        return await _getMonthlyTrendsForYear(now.year, fundId: fundId);
     }
   }
 
-  Future<List<TrendPoint>> _getWeeklyTrendsForMonth(DateTime start, DateTime end) async {
-    final dailyAmounts = await getDailyAmounts(startDate: start, endDate: end);
+  Future<List<TrendPoint>> _getWeeklyTrendsForMonth(DateTime start, DateTime end, {String? fundId}) async {
+    final dailyAmounts = await getDailyAmounts(startDate: start, endDate: end, fundId: fundId);
 
     // Agrupar por semana
     final Map<int, TrendPoint> weeklyMap = {};
@@ -306,18 +360,24 @@ class ReportsRepository {
     return weeklyMap.values.toList()..sort((a, b) => a.date.compareTo(b.date));
   }
 
-  Future<List<TrendPoint>> _getMonthlyTrendsForYear(int year) async {
+  Future<List<TrendPoint>> _getMonthlyTrendsForYear(int year, {String? fundId}) async {
     if (_userId == null) throw Exception('Usuario no autenticado');
 
     final startDate = DateTime(year, 1, 1);
     final endDate = DateTime(year, 12, 31);
 
-    final response = await _client
+    var query = _client
         .from('transactions')
         .select('amount, type, transaction_date')
         .eq('user_id', _userId!)
         .gte('transaction_date', startDate.toIso8601String().split('T')[0])
         .lte('transaction_date', endDate.toIso8601String().split('T')[0]);
+
+    if (fundId != null) {
+      query = query.eq('fund_id', fundId);
+    }
+
+    final response = await query;
 
     // Inicializar todos los meses
     final Map<int, TrendPoint> monthlyMap = {};
@@ -363,6 +423,7 @@ class ReportsRepository {
     required DateTime startDate,
     required DateTime endDate,
     MovementType movementType = MovementType.expense,
+    String? fundId,
   }) async {
     if (_userId == null) throw Exception('Usuario no autenticado');
 
@@ -373,6 +434,11 @@ class ReportsRepository {
         .eq('user_id', _userId!)
         .gte('transaction_date', startDate.toIso8601String().split('T')[0])
         .lte('transaction_date', endDate.toIso8601String().split('T')[0]);
+
+    // Filtrar por fondo si se especifica
+    if (fundId != null) {
+      query = query.eq('fund_id', fundId);
+    }
 
     // Filtrar por tipo si no es "ambos"
     if (movementType == MovementType.expense) {
@@ -441,10 +507,16 @@ class ReportsRepository {
     required DateTime startDate,
     required DateTime endDate,
     double targetSavingsRate = 20,
+    String? fundId,
+    MovementType movementType = MovementType.both,
   }) async {
+    // Para el indicador de ahorro, siempre necesitamos ambos tipos
+    // pero respetamos el filtro de fondo
     final summary = await getReportSummary(
       startDate: startDate,
       endDate: endDate,
+      fundId: fundId,
+      movementType: MovementType.both, // Always both for savings calculation
     );
 
     return SavingsIndicator(
@@ -459,6 +531,7 @@ class ReportsRepository {
     required ReportPeriod period,
     MovementType movementType = MovementType.both,
     double targetSavingsRate = 20,
+    String? fundId,
   }) async {
     final dateRange = period.getDateRange();
 
@@ -468,14 +541,16 @@ class ReportsRepository {
         startDate: dateRange.start,
         endDate: dateRange.end,
         targetSavingsRate: targetSavingsRate,
+        fundId: fundId,
       ),
-      getTrendsByPeriod(period: period),
-      getCashFlow(startDate: dateRange.start, endDate: dateRange.end),
-      getDailyAmounts(startDate: dateRange.start, endDate: dateRange.end),
+      getTrendsByPeriod(period: period, fundId: fundId),
+      getCashFlow(startDate: dateRange.start, endDate: dateRange.end, fundId: fundId),
+      getDailyAmounts(startDate: dateRange.start, endDate: dateRange.end, fundId: fundId),
       getCategoryBreakdownExtended(
         startDate: dateRange.start,
         endDate: dateRange.end,
         movementType: movementType,
+        fundId: fundId,
       ),
     ]);
 
@@ -488,6 +563,58 @@ class ReportsRepository {
       cashFlow: results[2] as List<CashFlowPoint>,
       dailyAmounts: results[3] as List<DailyAmount>,
       categoryBreakdown: results[4] as List<CategoryBreakdownExtended>,
+    );
+  }
+
+  /// Get spending comparison between current period and previous period
+  Future<SpendingComparison> getSpendingComparison({
+    required ReportPeriod period,
+    String? fundId,
+    MovementType movementType = MovementType.expense,
+  }) async {
+    if (_userId == null) throw Exception('Usuario no autenticado');
+
+    final currentRange = period.getDateRange();
+    final duration = currentRange.end.difference(currentRange.start);
+    final previousStart = currentRange.start.subtract(duration);
+    final previousEnd = currentRange.start.subtract(const Duration(days: 1));
+
+    // Get current period data
+    final currentSummary = await getReportSummary(
+      startDate: currentRange.start,
+      endDate: currentRange.end,
+      fundId: fundId,
+      movementType: movementType,
+    );
+
+    // Get previous period data
+    final previousSummary = await getReportSummary(
+      startDate: previousStart,
+      endDate: previousEnd,
+      fundId: fundId,
+      movementType: movementType,
+    );
+
+    // Get top spending category for current period
+    final categoryBreakdown = await getCategoryBreakdown(
+      startDate: currentRange.start,
+      endDate: currentRange.end,
+      fundId: fundId,
+      movementType: movementType,
+    );
+
+    final topCategory = categoryBreakdown.isNotEmpty ? categoryBreakdown.first : null;
+
+    return SpendingComparison(
+      currentPeriodAmount: movementType == MovementType.income
+          ? currentSummary.totalIncome
+          : currentSummary.totalExpense,
+      previousPeriodAmount: movementType == MovementType.income
+          ? previousSummary.totalIncome
+          : previousSummary.totalExpense,
+      topCategory: topCategory,
+      period: period,
+      movementType: movementType,
     );
   }
 
@@ -530,24 +657,6 @@ class ReportSummary {
   double get savingsRate => totalIncome > 0 ? (balance / totalIncome) * 100 : 0;
 }
 
-/// Category spending breakdown
-class CategoryBreakdown {
-  final String categoryId;
-  final String categoryName;
-  final String? categoryIcon;
-  final String? categoryColor;
-  final double amount;
-  final double percentage;
-
-  const CategoryBreakdown({
-    required this.categoryId,
-    required this.categoryName,
-    this.categoryIcon,
-    this.categoryColor,
-    required this.amount,
-    required this.percentage,
-  });
-}
 
 /// Monthly trend data
 class MonthlyTrend {

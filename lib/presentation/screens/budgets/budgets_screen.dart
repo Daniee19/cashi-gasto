@@ -1,16 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/budget.dart';
 import '../../../data/models/category.dart';
 import '../../../data/repositories/budget_repository.dart';
 import '../../providers/budget_provider.dart';
 import '../../providers/category_provider.dart';
+import '../../widgets/cashito_mascot.dart';
+import '../../widgets/category_icon.dart';
 
 class BudgetsScreen extends ConsumerWidget {
   final bool showAppBar;
 
   const BudgetsScreen({super.key, this.showAppBar = true});
+
+  /// Calcula la fecha final según el período
+  DateTime _calculateEndDate(DateTime startDate, BudgetPeriod period) {
+    switch (period) {
+      case BudgetPeriod.weekly:
+        return startDate.add(const Duration(days: 7));
+      case BudgetPeriod.monthly:
+        return DateTime(startDate.year, startDate.month + 1, startDate.day);
+      case BudgetPeriod.yearly:
+        return DateTime(startDate.year + 1, startDate.month, startDate.day);
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -104,40 +119,14 @@ class BudgetsScreen extends ConsumerWidget {
     WidgetRef ref,
     AsyncValue<List<Category>> categoriesAsync,
   ) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.savings_outlined,
-              size: 80,
-              color: AppColors.textMuted.withValues(alpha: 0.5),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Sin presupuestos',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Crea un presupuesto para controlar tus gastos por categoria',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textMuted,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () => _showAddBudgetModal(context, ref, categoriesAsync),
-              icon: const Icon(Icons.add),
-              label: const Text('Crear Presupuesto'),
-            ),
-          ],
-        ),
+    return CashitoEmptyState(
+      mood: CashitoMood.savings,
+      title: 'Sin presupuestos',
+      subtitle: 'Crea un presupuesto para controlar tus gastos por categoria',
+      action: ElevatedButton.icon(
+        onPressed: () => _showAddBudgetModal(context, ref, categoriesAsync),
+        icon: const Icon(Icons.add),
+        label: const Text('Crear Presupuesto'),
       ),
     );
   }
@@ -175,7 +164,7 @@ class BudgetsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '\$${totalBudgeted.toStringAsFixed(2)}',
+                    'S/ ${totalBudgeted.toStringAsFixed(2)}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 24,
@@ -193,7 +182,7 @@ class BudgetsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '\$${totalSpent.toStringAsFixed(2)}',
+                    'S/ ${totalSpent.toStringAsFixed(2)}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 24,
@@ -279,71 +268,59 @@ class BudgetsScreen extends ConsumerWidget {
     final percentUsed = budgetWithSpent.percentUsed;
     final remaining = budgetWithSpent.remaining;
 
-    // Get category name
-    final categoryName = categoriesAsync.when(
-      loading: () => 'Cargando...',
-      error: (_, __) => 'Categoria',
-      data: (categories) {
-        final category = categories.where((c) => c.id == budget.categoryId).firstOrNull;
-        return category?.name ?? 'Sin categoria';
-      },
-    );
-
-    final categoryIcon = categoriesAsync.when(
+    // Get category
+    final category = categoriesAsync.when(
       loading: () => null,
       error: (_, __) => null,
       data: (categories) {
-        final category = categories.where((c) => c.id == budget.categoryId).firstOrNull;
-        return category?.icon;
+        return categories.where((c) => c.id == budget.categoryId).firstOrNull;
       },
     );
 
+    final categoryName = category?.name ?? 'Sin categoria';
+
     // Determine color based on percentage
     Color progressColor;
-    Color bgColor;
     if (budgetWithSpent.isOverBudget) {
       progressColor = AppColors.expense;
-      bgColor = AppColors.expense.withValues(alpha: 0.1);
     } else if (budgetWithSpent.isWarning) {
       progressColor = AppColors.warning;
-      bgColor = AppColors.warning.withValues(alpha: 0.1);
     } else {
       progressColor = AppColors.income;
-      bgColor = AppColors.income.withValues(alpha: 0.1);
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: categoryIcon != null
-                      ? Text(categoryIcon, style: const TextStyle(fontSize: 22))
-                      : Icon(Icons.category, color: progressColor),
-                ),
-              ),
+    return GestureDetector(
+      onTap: () => _showBudgetDetails(context, ref, budgetWithSpent, category, progressColor),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                category != null
+                    ? CategoryIcon(category: category, size: 44)
+                    : Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: progressColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.category, color: AppColors.textMuted),
+                      ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -423,7 +400,7 @@ class BudgetsScreen extends ConsumerWidget {
                     style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                   ),
                   Text(
-                    '\$${spent.toStringAsFixed(2)}',
+                    'S/ ${spent.toStringAsFixed(2)}',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: progressColor,
@@ -452,7 +429,7 @@ class BudgetsScreen extends ConsumerWidget {
                     style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                   ),
                   Text(
-                    '\$${remaining.abs().toStringAsFixed(2)}',
+                    'S/ ${remaining.abs().toStringAsFixed(2)}',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: budgetWithSpent.isOverBudget ? AppColors.expense : AppColors.income,
@@ -463,6 +440,182 @@ class BudgetsScreen extends ConsumerWidget {
             ],
           ),
         ],
+      ),
+      ),
+    );
+  }
+
+  void _showBudgetDetails(
+    BuildContext context,
+    WidgetRef ref,
+    BudgetWithSpent budgetWithSpent,
+    Category? category,
+    Color progressColor,
+  ) {
+    final budget = budgetWithSpent.budget;
+    final categoryName = category?.name ?? 'Sin categoria';
+    final dateFormat = DateFormat('dd MMM yyyy', 'es_ES');
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  // Icono y nombre
+                  category != null
+                      ? CategoryIcon(category: category, size: 64, borderRadius: 16)
+                      : Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: progressColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(Icons.category, size: 32, color: AppColors.textMuted),
+                        ),
+                  const SizedBox(height: 12),
+                  Text(
+                    categoryName,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    budget.period.displayName,
+                    style: TextStyle(color: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Fechas
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Icon(Icons.calendar_today, size: 20, color: AppColors.primary),
+                              const SizedBox(height: 4),
+                              const Text('Inicio', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                              const SizedBox(height: 2),
+                              Text(
+                                dateFormat.format(budget.startDate),
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          width: 1,
+                          height: 50,
+                          color: Colors.grey[300],
+                        ),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Icon(Icons.event, size: 20, color: AppColors.expense),
+                              const SizedBox(height: 4),
+                              const Text('Fin', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                              const SizedBox(height: 2),
+                              Text(
+                                dateFormat.format(budget.endDate),
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Montos
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _DetailItem(
+                          label: 'Presupuestado',
+                          value: 'S/ ${budget.amountBudgeted.toStringAsFixed(2)}',
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      Expanded(
+                        child: _DetailItem(
+                          label: 'Gastado',
+                          value: 'S/ ${budgetWithSpent.spent.toStringAsFixed(2)}',
+                          color: progressColor,
+                        ),
+                      ),
+                      Expanded(
+                        child: _DetailItem(
+                          label: budgetWithSpent.isOverBudget ? 'Excedido' : 'Disponible',
+                          value: 'S/ ${budgetWithSpent.remaining.abs().toStringAsFixed(2)}',
+                          color: budgetWithSpent.isOverBudget ? AppColors.expense : AppColors.income,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Botones
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _showEditBudgetModal(context, ref, budgetWithSpent);
+                          },
+                          icon: const Icon(Icons.edit_outlined),
+                          label: const Text('Editar'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _showDeleteConfirmation(context, ref, budget);
+                          },
+                          icon: const Icon(Icons.delete_outline),
+                          label: const Text('Eliminar'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.expense,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -475,6 +628,8 @@ class BudgetsScreen extends ConsumerWidget {
     final amountController = TextEditingController();
     Category? selectedCategory;
     BudgetPeriod selectedPeriod = BudgetPeriod.monthly;
+    DateTime startDate = DateTime.now();
+    final dateFormat = DateFormat('dd MMM yyyy', 'es_ES');
 
     // Get expense categories only
     final expenseCategories = categoriesAsync.when(
@@ -544,7 +699,7 @@ class BudgetsScreen extends ConsumerWidget {
                         value: category,
                         child: Row(
                           children: [
-                            Text(category.icon ?? '📁', style: const TextStyle(fontSize: 20)),
+                            CategoryIcon(category: category, size: 28, borderRadius: 6),
                             const SizedBox(width: 12),
                             Text(category.name),
                           ],
@@ -613,6 +768,59 @@ class BudgetsScreen extends ConsumerWidget {
                   );
                 }).toList(),
               ),
+              const SizedBox(height: 16),
+
+              // Date selector
+              Text(
+                'Fecha de inicio',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: startDate,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime(2030),
+                  );
+                  if (picked != null) {
+                    setModalState(() => startDate = picked);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_today, color: AppColors.primary, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Inicio: ${dateFormat.format(startDate)}',
+                              style: const TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Fin: ${dateFormat.format(_calculateEndDate(startDate, selectedPeriod))}',
+                              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, color: Colors.grey[400]),
+                    ],
+                  ),
+                ),
+              ),
               const SizedBox(height: 24),
 
               SizedBox(
@@ -633,10 +841,13 @@ class BudgetsScreen extends ConsumerWidget {
                       return;
                     }
 
+                    final endDate = _calculateEndDate(startDate, selectedPeriod);
                     final success = await ref.read(budgetNotifierProvider.notifier).addBudget(
                           categoryId: selectedCategory!.id,
                           period: selectedPeriod,
                           amountBudgeted: amount,
+                          startDate: startDate,
+                          endDate: endDate,
                         );
 
                     if (context.mounted) {
@@ -786,6 +997,41 @@ class BudgetsScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _DetailItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _DetailItem({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 }

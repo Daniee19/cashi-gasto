@@ -43,6 +43,7 @@ class CategoryNotifier extends StateNotifier<AsyncValue<List<Category>>> {
     String? description,
     String? icon,
     String? color,
+    String? imageUrl,
   }) async {
     try {
       await _repository.addCategory(
@@ -51,6 +52,7 @@ class CategoryNotifier extends StateNotifier<AsyncValue<List<Category>>> {
         description: description,
         icon: icon,
         color: color,
+        imageUrl: imageUrl,
       );
       await loadCategories();
       return true;
@@ -65,6 +67,7 @@ class CategoryNotifier extends StateNotifier<AsyncValue<List<Category>>> {
     String? description,
     String? icon,
     String? color,
+    String? imageUrl,
   }) async {
     try {
       await _repository.updateCategory(
@@ -73,6 +76,7 @@ class CategoryNotifier extends StateNotifier<AsyncValue<List<Category>>> {
         description: description,
         icon: icon,
         color: color,
+        imageUrl: imageUrl,
       );
       await loadCategories();
       return true;

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/category.dart';
 import '../../providers/category_provider.dart';
+import '../../widgets/cashito_mascot.dart';
+import '../../widgets/category_icon.dart';
 
 class CategoriesScreen extends ConsumerStatefulWidget {
   const CategoriesScreen({super.key});
@@ -617,24 +619,10 @@ class _CategoryList extends StatelessWidget {
         final filtered = categories.where((c) => c.type == type).toList();
 
         if (filtered.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  type == CategoryType.expense
-                      ? Icons.shopping_bag_outlined
-                      : Icons.account_balance_wallet_outlined,
-                  size: 64,
-                  color: Colors.grey[300],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'No hay categorias de ${type == CategoryType.expense ? 'gastos' : 'ingresos'}',
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-              ],
-            ),
+          return CashitoEmptyState(
+            mood: type == CategoryType.expense ? CashitoMood.receipts : CashitoMood.money,
+            title: 'No hay categorias de ${type == CategoryType.expense ? 'gastos' : 'ingresos'}',
+            subtitle: 'Las categorias predeterminadas aparecen automaticamente',
           );
         }
 
@@ -653,19 +641,9 @@ class _CategoryList extends StatelessWidget {
                 border: Border.all(color: Colors.grey.shade200),
               ),
               child: ListTile(
-                leading: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: category.colorValue.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Center(
-                    child: Text(
-                      category.icon ?? '📁',
-                      style: const TextStyle(fontSize: 22),
-                    ),
-                  ),
+                leading: CategoryIcon(
+                  category: category,
+                  backgroundColor: category.colorValue.withOpacity(0.15),
                 ),
                 title: Text(
                   category.name,

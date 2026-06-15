@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/financial_goal.dart';
 import '../../providers/financial_goal_provider.dart';
+import '../../widgets/cashito_mascot.dart';
 import 'dart:math' as math;
 
 class GoalsScreen extends ConsumerStatefulWidget {
@@ -100,50 +101,39 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> with SingleTickerProv
   }
 
   Widget _buildEmptyState(BuildContext context, GoalStatus status) {
-    String message;
-    IconData icon;
+    CashitoMood mood;
+    String title;
+    String? subtitle;
 
     switch (status) {
       case GoalStatus.active:
-        message = 'No tienes metas activas.\nCrea una para empezar a ahorrar.';
-        icon = Icons.flag_outlined;
+        mood = CashitoMood.goals;
+        title = 'No tienes metas activas';
+        subtitle = 'Crea una meta para empezar a ahorrar';
         break;
       case GoalStatus.completed:
-        message = 'Aun no has completado ninguna meta.\n¡Sigue adelante!';
-        icon = Icons.emoji_events_outlined;
+        mood = CashitoMood.happy;
+        title = 'Aun no has completado metas';
+        subtitle = '¡Sigue adelante, tu puedes!';
         break;
       case GoalStatus.cancelled:
-        message = 'No tienes metas canceladas.';
-        icon = Icons.cancel_outlined;
+        mood = CashitoMood.sad;
+        title = 'No tienes metas canceladas';
+        subtitle = 'Eso es bueno, sigue asi';
         break;
     }
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 80, color: AppColors.textMuted.withValues(alpha: 0.5)),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.textMuted,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            if (status == GoalStatus.active) ...[
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () => _showAddGoalModal(context),
-                icon: const Icon(Icons.add),
-                label: const Text('Crear Meta'),
-              ),
-            ],
-          ],
-        ),
-      ),
+    return CashitoEmptyState(
+      mood: mood,
+      title: title,
+      subtitle: subtitle,
+      action: status == GoalStatus.active
+          ? ElevatedButton.icon(
+              onPressed: () => _showAddGoalModal(context),
+              icon: const Icon(Icons.add),
+              label: const Text('Crear Meta'),
+            )
+          : null,
     );
   }
 
@@ -274,11 +264,33 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> with SingleTickerProv
                               ),
                             ],
                           )
-                        else if (isCancelled)
-                          IconButton(
-                            icon: const Icon(Icons.refresh, size: 20),
-                            onPressed: () => _reactivateGoal(context, goal),
-                            tooltip: 'Reactivar',
+                        else if (isCompleted || isCancelled)
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert, size: 20),
+                            onSelected: (value) => _handleMenuAction(context, value, goal),
+                            itemBuilder: (context) => [
+                              if (isCancelled)
+                                const PopupMenuItem(
+                                  value: 'reactivate',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.refresh, size: 20, color: AppColors.primary),
+                                      SizedBox(width: 8),
+                                      Text('Reactivar'),
+                                    ],
+                                  ),
+                                ),
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.delete, size: 20, color: AppColors.expense),
+                                    SizedBox(width: 8),
+                                    Text('Eliminar', style: TextStyle(color: AppColors.expense)),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                       ],
                     ),
@@ -299,14 +311,14 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> with SingleTickerProv
                     Row(
                       children: [
                         Text(
-                          '\$${goal.currentAmount.toStringAsFixed(2)}',
+                          'S/ ${goal.currentAmount.toStringAsFixed(2)}',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: progressColor,
                           ),
                         ),
                         Text(
-                          ' / \$${goal.targetAmount.toStringAsFixed(2)}',
+                          ' / S/ ${goal.targetAmount.toStringAsFixed(2)}',
                           style: TextStyle(
                             color: AppColors.textMuted,
                             fontSize: 13,
@@ -385,6 +397,12 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> with SingleTickerProv
         break;
       case 'cancel':
         _showCancelConfirmation(context, goal);
+        break;
+      case 'reactivate':
+        _reactivateGoal(context, goal);
+        break;
+      case 'delete':
+        _showDeleteConfirmation(context, goal);
         break;
     }
   }
@@ -751,7 +769,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> with SingleTickerProv
             ),
             const SizedBox(height: 8),
             Text(
-              'Faltan \$${remaining.toStringAsFixed(2)} para completar la meta',
+              'Faltan S/ ${remaining.toStringAsFixed(2)} para completar la meta',
               style: TextStyle(color: AppColors.textMuted),
             ),
             const SizedBox(height: 24),
@@ -801,7 +819,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> with SingleTickerProv
                           content: Text(
                             completed
                                 ? '¡Felicidades! Meta completada'
-                                : 'Aporte de \$${amount.toStringAsFixed(2)} registrado',
+                                : 'Aporte de S/ ${amount.toStringAsFixed(2)} registrado',
                           ),
                           backgroundColor: completed ? AppColors.income : null,
                         ),
@@ -871,6 +889,39 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> with SingleTickerProv
         SnackBar(content: Text(success ? 'Meta reactivada' : 'Error al reactivar')),
       );
     }
+  }
+
+  void _showDeleteConfirmation(BuildContext context, FinancialGoal goal) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar Meta'),
+        content: Text(
+          '¿Estas seguro de eliminar "${goal.title}"?\n\nEsta accion no se puede deshacer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final success = await ref.read(financialGoalNotifierProvider.notifier).deleteGoal(goal.id);
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(success ? 'Meta eliminada' : 'Error al eliminar'),
+                  ),
+                );
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: AppColors.expense),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

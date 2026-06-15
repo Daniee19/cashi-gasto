@@ -5,12 +5,15 @@ import 'package:intl/intl.dart';
 import '../../../app/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../data/models/category.dart';
 import '../../../data/models/transaction.dart';
 import '../../../data/models/fund.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/fund_provider.dart';
 import '../../providers/selected_fund_provider.dart';
+import '../../widgets/cashito_mascot.dart';
+import '../../widgets/category_icon.dart';
 
 class TransactionListScreen extends ConsumerWidget {
   final bool showAppBar;
@@ -201,36 +204,14 @@ class TransactionListScreen extends ConsumerWidget {
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.receipt_long_outlined,
-            size: 80,
-            color: AppColors.textMuted.withOpacity(0.5),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No hay transacciones',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColors.textMuted,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Agrega tu primera transaccion para comenzar',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textMuted,
-                ),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => context.push(AppRoutes.addTransaction),
-            icon: const Icon(Icons.add),
-            label: const Text(AppStrings.addTransaction),
-          ),
-        ],
+    return CashitoEmptyState(
+      mood: CashitoMood.receipts,
+      title: 'No hay transacciones',
+      subtitle: 'Agrega tu primera transaccion para comenzar',
+      action: ElevatedButton.icon(
+        onPressed: () => context.push(AppRoutes.addTransaction),
+        icon: const Icon(Icons.add),
+        label: const Text(AppStrings.addTransaction),
       ),
     );
   }
@@ -569,7 +550,7 @@ class TransactionListScreen extends ConsumerWidget {
       builder: (context) => AlertDialog(
         title: const Text('Eliminar transaccion'),
         content: Text(
-          '¿Estas seguro de eliminar esta transaccion de \$${transaction.amount.toStringAsFixed(2)}?',
+          '¿Estas seguro de eliminar esta transaccion de S/ ${transaction.amount.toStringAsFixed(2)}?',
         ),
         actions: [
           TextButton(
@@ -605,7 +586,7 @@ class TransactionListScreen extends ConsumerWidget {
 
 class _TransactionCard extends StatelessWidget {
   final Transaction transaction;
-  final dynamic category;
+  final Category? category;
   final Fund? fund;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -618,50 +599,10 @@ class _TransactionCard extends StatelessWidget {
     required this.onDelete,
   });
 
-  /// Convierte nombres de iconos Material a emojis
-  String _getEmoji(String? iconName, bool isExpense) {
-    const iconToEmoji = {
-      // Gastos
-      'restaurant': '🍔',
-      'directions_car': '🚗',
-      'movie': '🎬',
-      'shopping_bag': '🛍️',
-      'medical_services': '🏥',
-      'school': '📚',
-      'receipt': '🧾',
-      'more_horiz': '📦',
-      // Ingresos
-      'payments': '💵',
-      'trending_up': '📈',
-      'card_giftcard': '🎁',
-      // Otros
-      'home': '🏠',
-      'pets': '🐾',
-      'fitness_center': '💪',
-      'flight': '✈️',
-      'phone': '📱',
-      'wifi': '📶',
-      'water_drop': '💧',
-      'bolt': '⚡',
-    };
-
-    if (iconName == null) {
-      return isExpense ? '💸' : '💰';
-    }
-
-    // Si ya es un emoji, devolverlo tal cual
-    if (iconName.contains(RegExp(r'[\u{1F300}-\u{1F9FF}]', unicode: true))) {
-      return iconName;
-    }
-
-    return iconToEmoji[iconName] ?? (isExpense ? '💸' : '💰');
-  }
-
   void _showDetails(BuildContext context) {
     final isExpense = transaction.type == TransactionType.expense;
     final color = isExpense ? AppColors.expense : AppColors.income;
     final sign = isExpense ? '-' : '+';
-    final categoryIcon = _getEmoji(category?.icon, isExpense);
     final dateFormat = DateFormat('EEEE, d MMMM yyyy', 'es_ES');
     final timeFormat = DateFormat('HH:mm');
 
@@ -691,20 +632,24 @@ class _TransactionCard extends StatelessWidget {
               child: Column(
                 children: [
                   // Icono y monto
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Center(
-                      child: Text(categoryIcon, style: const TextStyle(fontSize: 32)),
-                    ),
-                  ),
+                  category != null
+                      ? CategoryIcon(category: category!, size: 64, borderRadius: 16)
+                      : Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: color.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Icon(
+                            isExpense ? Icons.arrow_upward : Icons.arrow_downward,
+                            size: 32,
+                            color: color,
+                          ),
+                        ),
                   const SizedBox(height: 16),
                   Text(
-                    '$sign\$${transaction.amount.toStringAsFixed(2)}',
+                    '$sign/ ${transaction.amount.toStringAsFixed(2)}',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -795,7 +740,6 @@ class _TransactionCard extends StatelessWidget {
     final color = isExpense ? AppColors.expense : AppColors.income;
     final sign = isExpense ? '-' : '+';
     final timeFormat = DateFormat('HH:mm');
-    final categoryIcon = _getEmoji(category?.icon, isExpense);
 
     return GestureDetector(
       onTap: () => _showDetails(context),
@@ -817,17 +761,20 @@ class _TransactionCard extends StatelessWidget {
           child: Row(
             children: [
               // Icono categoría
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(categoryIcon, style: const TextStyle(fontSize: 22)),
-                ),
-              ),
+              category != null
+                  ? CategoryIcon(category: category!, size: 44)
+                  : Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        isExpense ? Icons.arrow_upward : Icons.arrow_downward,
+                        color: color,
+                      ),
+                    ),
               const SizedBox(width: 12),
               // Info
               Expanded(
@@ -859,7 +806,7 @@ class _TransactionCard extends StatelessWidget {
               ),
               // Monto
               Text(
-                '$sign\$${transaction.amount.toStringAsFixed(2)}',
+                '$sign/ ${transaction.amount.toStringAsFixed(2)}',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 15,

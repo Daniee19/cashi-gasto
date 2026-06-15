@@ -3,16 +3,17 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 import '../data/repositories/reports_repository.dart';
+import '../data/models/report_models.dart';
 
 class PdfExportService {
   /// Generate and share a PDF report
   Future<void> generateAndShareReport({
     required ReportSummary summary,
     required List<CategoryBreakdown> categoryBreakdown,
-    required List<MonthlyTrend> monthlyTrends,
+    required List<CategoryBreakdown> topCategories,
   }) async {
     final pdf = pw.Document();
-    final currencyFormat = NumberFormat.currency(locale: 'es_MX', symbol: '\$');
+    final currencyFormat = NumberFormat.currency(locale: 'es_MX', symbol: 'S/ ');
     final dateFormat = DateFormat('dd/MM/yyyy');
 
     pdf.addPage(
@@ -56,11 +57,11 @@ class PdfExportService {
             pw.SizedBox(height: 24),
           ],
 
-          // Monthly trends section
-          if (monthlyTrends.isNotEmpty) ...[
-            _buildSectionTitle('Tendencia Mensual'),
+          // Top categories section
+          if (topCategories.isNotEmpty) ...[
+            _buildSectionTitle('Top 5 Categorias'),
             pw.SizedBox(height: 12),
-            _buildTrendsTable(monthlyTrends, currencyFormat),
+            _buildTopCategoriesTable(topCategories, currencyFormat),
           ],
         ],
       ),
@@ -235,40 +236,36 @@ class PdfExportService {
     );
   }
 
-  pw.Widget _buildTrendsTable(List<MonthlyTrend> trends, NumberFormat currencyFormat) {
-    final monthFormat = DateFormat('MMM yyyy', 'es');
-
+  pw.Widget _buildTopCategoriesTable(List<CategoryBreakdown> categories, NumberFormat currencyFormat) {
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey300),
       columnWidths: {
-        0: const pw.FlexColumnWidth(2),
-        1: const pw.FlexColumnWidth(2),
+        0: const pw.FlexColumnWidth(1),
+        1: const pw.FlexColumnWidth(3),
         2: const pw.FlexColumnWidth(2),
-        3: const pw.FlexColumnWidth(2),
+        3: const pw.FlexColumnWidth(1),
       },
       children: [
         // Header
         pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfColors.grey100),
           children: [
-            _buildTableHeader('Mes'),
-            _buildTableHeader('Ingresos'),
-            _buildTableHeader('Gastos'),
-            _buildTableHeader('Balance'),
+            _buildTableHeader('#'),
+            _buildTableHeader('Categoria'),
+            _buildTableHeader('Monto'),
+            _buildTableHeader('%'),
           ],
         ),
         // Data rows
-        ...trends.map((item) {
-          final isPositive = item.balance >= 0;
+        ...categories.asMap().entries.map((entry) {
+          final index = entry.key + 1;
+          final item = entry.value;
           return pw.TableRow(
             children: [
-              _buildTableCell(monthFormat.format(item.month)),
-              _buildTableCell(currencyFormat.format(item.income), color: PdfColors.green700),
-              _buildTableCell(currencyFormat.format(item.expense), color: PdfColors.red700),
-              _buildTableCell(
-                currencyFormat.format(item.balance),
-                color: isPositive ? PdfColors.green700 : PdfColors.red700,
-              ),
+              _buildTableCell('$index'),
+              _buildTableCell(item.categoryName),
+              _buildTableCell(currencyFormat.format(item.amount)),
+              _buildTableCell('${item.percentage.toStringAsFixed(1)}%'),
             ],
           );
         }),

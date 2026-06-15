@@ -7,13 +7,15 @@ import '../../../core/constants/app_colors.dart';
 import '../../../data/models/fund.dart';
 import '../../providers/fund_provider.dart';
 import '../../providers/selected_fund_provider.dart';
+import '../../widgets/cashito_mascot.dart';
 
 class FundsScreen extends ConsumerWidget {
   const FundsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final fundsAsync = ref.watch(fundNotifierProvider);
+    // Use fundsWithCalculatedBalanceProvider to get balances calculated from transactions
+    final fundsAsync = ref.watch(fundsWithCalculatedBalanceProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -145,37 +147,14 @@ class FundsScreen extends ConsumerWidget {
   }
 
   Widget _buildEmptyState(BuildContext context, WidgetRef ref) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.account_balance_wallet_outlined,
-            size: 80,
-            color: AppColors.textMuted.withValues(alpha: 0.5),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No tienes fondos',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Crea tu primer fondo para organizar tu dinero',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textMuted,
-                ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => _showAddFundModal(context, ref),
-            icon: const Icon(Icons.add),
-            label: const Text('Crear Fondo'),
-          ),
-        ],
+    return CashitoEmptyState(
+      mood: CashitoMood.savings,
+      title: 'No tienes fondos',
+      subtitle: 'Crea tu primer fondo para organizar tu dinero',
+      action: ElevatedButton.icon(
+        onPressed: () => _showAddFundModal(context, ref),
+        icon: const Icon(Icons.add),
+        label: const Text('Crear Fondo'),
       ),
     );
   }
@@ -226,7 +205,7 @@ class FundsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            '\$${totalBalance.toStringAsFixed(2)}',
+            'S/ ${totalBalance.toStringAsFixed(2)}',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 36,
@@ -371,7 +350,7 @@ class FundsScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '\$${fund.balance.toStringAsFixed(2)}',
+              'S/ ${fund.balance.toStringAsFixed(2)}',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,

@@ -5,6 +5,10 @@ class AppStrings {
   static const String appName = 'Cashi Gasto';
   static const String mascotName = 'Cashito';
 
+  // Currency
+  static const String currencySymbol = 'S/';
+  static const String currencyLocale = 'es_PE';
+
   // Auth
   static const String login = 'Iniciar Sesion';
   static const String register = 'Registrarse';

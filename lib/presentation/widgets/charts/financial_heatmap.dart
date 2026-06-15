@@ -6,6 +6,7 @@ import '../../../data/models/report_models.dart';
 class FinancialHeatmap extends StatefulWidget {
   final List<DailyAmount> data;
   final ReportPeriod period;
+  final MovementType movementType;
   final bool showTooltip;
   final bool animate;
 
@@ -13,6 +14,7 @@ class FinancialHeatmap extends StatefulWidget {
     super.key,
     required this.data,
     required this.period,
+    this.movementType = MovementType.expense,
     this.showTooltip = true,
     this.animate = true,
   });
@@ -165,7 +167,7 @@ class _FinancialHeatmapState extends State<FinancialHeatmap>
                       _MiniStat(
                         icon: Icons.arrow_upward,
                         color: AppColors.income,
-                        value: '\$${day.income.toStringAsFixed(0)}',
+                        value: 'S/ ${day.income.toStringAsFixed(0)}',
                       ),
                       const SizedBox(width: 16),
                     ],
@@ -173,7 +175,7 @@ class _FinancialHeatmapState extends State<FinancialHeatmap>
                       _MiniStat(
                         icon: Icons.arrow_downward,
                         color: AppColors.expense,
-                        value: '\$${day.expense.toStringAsFixed(0)}',
+                        value: 'S/ ${day.expense.toStringAsFixed(0)}',
                       ),
                       const SizedBox(width: 16),
                     ],
@@ -237,7 +239,7 @@ class _FinancialHeatmapState extends State<FinancialHeatmap>
                       _MiniStat(
                         icon: Icons.arrow_upward,
                         color: AppColors.income,
-                        value: '\$${_selectedMonthIncome.toStringAsFixed(0)}',
+                        value: 'S/ ${_selectedMonthIncome.toStringAsFixed(0)}',
                       ),
                       const SizedBox(width: 16),
                     ],
@@ -245,7 +247,7 @@ class _FinancialHeatmapState extends State<FinancialHeatmap>
                       _MiniStat(
                         icon: Icons.arrow_downward,
                         color: AppColors.expense,
-                        value: '\$${_selectedMonthExpense.toStringAsFixed(0)}',
+                        value: 'S/ ${_selectedMonthExpense.toStringAsFixed(0)}',
                       ),
                       const SizedBox(width: 16),
                     ],
@@ -283,7 +285,7 @@ class _FinancialHeatmapState extends State<FinancialHeatmap>
 
   Widget _buildWeekView() {
     const days = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'];
-    final maxExpense = _calculateMaxExpense();
+    final maxAmount = _calculateMaxAmount();
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -308,8 +310,9 @@ class _FinancialHeatmapState extends State<FinancialHeatmap>
                 const SizedBox(height: 8),
                 _HeatmapCell(
                   day: day,
-                  maxExpense: maxExpense,
+                  maxAmount: maxAmount,
                   animationValue: _animation.value,
+                  movementType: widget.movementType,
                   isSelected: _selectedDay?.date == day.date,
                   size: 50,
                   onTap: () => setState(() {
@@ -333,7 +336,7 @@ class _FinancialHeatmapState extends State<FinancialHeatmap>
   }
 
   Widget _buildMonthView() {
-    final maxExpense = _calculateMaxExpense();
+    final maxAmount = _calculateMaxAmount();
     final firstDay = widget.data.isNotEmpty ? widget.data.first.date : DateTime.now();
     final startWeekday = DateTime(firstDay.year, firstDay.month, 1).weekday;
 
@@ -387,8 +390,9 @@ class _FinancialHeatmapState extends State<FinancialHeatmap>
               }
               return _HeatmapCell(
                 day: day,
-                maxExpense: maxExpense,
+                maxAmount: maxAmount,
                 animationValue: _animation.value,
+                movementType: widget.movementType,
                 isSelected: _selectedDay?.date == day.date,
                 showLabel: true,
                 onTap: () => setState(() {
@@ -403,7 +407,7 @@ class _FinancialHeatmapState extends State<FinancialHeatmap>
   }
 
   Widget _buildYearView() {
-    final maxExpense = _calculateMaxExpense();
+    final maxAmount = _calculateMaxAmount();
 
     // Agrupar por mes
     final Map<int, List<DailyAmount>> monthlyData = {};
@@ -427,8 +431,8 @@ class _FinancialHeatmapState extends State<FinancialHeatmap>
       itemBuilder: (context, index) {
         final month = index + 1;
         final days = monthlyData[month] ?? [];
-        final totalExpense = days.fold(0.0, (sum, d) => sum + d.expense);
-        final intensity = maxExpense > 0 ? totalExpense / maxExpense : 0.0;
+        final totalAmount = days.fold(0.0, (sum, d) => sum + d.amountForType(widget.movementType));
+        final intensity = maxAmount > 0 ? totalAmount / maxAmount : 0.0;
 
         return GestureDetector(
           onTap: () {
@@ -475,10 +479,10 @@ class _FinancialHeatmapState extends State<FinancialHeatmap>
                       fontSize: 12,
                     ),
                   ),
-                  if (totalExpense > 0) ...[
+                  if (totalAmount > 0) ...[
                     const SizedBox(height: 2),
                     Text(
-                      '\$${_formatAmount(totalExpense)}',
+                      'S/ ${_formatAmount(totalAmount)}',
                       style: TextStyle(
                         color: intensity > 0.5
                             ? Colors.white.withValues(alpha: 0.9)
@@ -496,39 +500,49 @@ class _FinancialHeatmapState extends State<FinancialHeatmap>
     );
   }
 
-  double _calculateMaxExpense() {
+  double _calculateMaxAmount() {
     if (widget.data.isEmpty) return 1;
-    return widget.data.map((d) => d.expense).reduce((a, b) => a > b ? a : b);
+    final amounts = widget.data.map((d) => d.amountForType(widget.movementType)).toList();
+    if (amounts.isEmpty) return 1;
+    final maxVal = amounts.reduce((a, b) => a > b ? a : b);
+    // Return at least 1 to avoid division issues when all amounts are 0
+    return maxVal > 0 ? maxVal : 1;
   }
 
   Color _getIntensityColor(double intensity) {
     if (intensity <= 0) return Colors.grey.withValues(alpha: 0.1);
 
-    // Gradiente de verde claro a rojo
-    if (intensity < 0.25) {
-      return Color.lerp(
-        Colors.green.withValues(alpha: 0.2),
-        Colors.green.withValues(alpha: 0.5),
-        intensity / 0.25,
-      )!;
-    } else if (intensity < 0.5) {
-      return Color.lerp(
-        Colors.green.withValues(alpha: 0.5),
-        Colors.yellow.withValues(alpha: 0.6),
-        (intensity - 0.25) / 0.25,
-      )!;
-    } else if (intensity < 0.75) {
-      return Color.lerp(
-        Colors.orange.withValues(alpha: 0.6),
-        Colors.deepOrange.withValues(alpha: 0.7),
-        (intensity - 0.5) / 0.25,
-      )!;
-    } else {
-      return Color.lerp(
-        Colors.deepOrange.withValues(alpha: 0.7),
-        AppColors.expense.withValues(alpha: 0.9),
-        (intensity - 0.75) / 0.25,
-      )!;
+    // Different color schemes based on movement type
+    switch (widget.movementType) {
+      case MovementType.income:
+        // Green gradient for income
+        return Color.lerp(
+          AppColors.income.withValues(alpha: 0.2),
+          AppColors.income.withValues(alpha: 0.9),
+          intensity,
+        )!;
+      case MovementType.expense:
+        // Red gradient for expense
+        if (intensity < 0.5) {
+          return Color.lerp(
+            Colors.orange.withValues(alpha: 0.3),
+            Colors.deepOrange.withValues(alpha: 0.6),
+            intensity / 0.5,
+          )!;
+        } else {
+          return Color.lerp(
+            Colors.deepOrange.withValues(alpha: 0.6),
+            AppColors.expense.withValues(alpha: 0.9),
+            (intensity - 0.5) / 0.5,
+          )!;
+        }
+      case MovementType.both:
+        // Purple gradient for both
+        return Color.lerp(
+          AppColors.primary.withValues(alpha: 0.2),
+          AppColors.primary.withValues(alpha: 0.9),
+          intensity,
+        )!;
     }
   }
 
@@ -549,8 +563,9 @@ class _FinancialHeatmapState extends State<FinancialHeatmap>
 
 class _HeatmapCell extends StatelessWidget {
   final DailyAmount day;
-  final double maxExpense;
+  final double maxAmount;
   final double animationValue;
+  final MovementType movementType;
   final bool isSelected;
   final bool showLabel;
   final double? size;
@@ -558,8 +573,9 @@ class _HeatmapCell extends StatelessWidget {
 
   const _HeatmapCell({
     required this.day,
-    required this.maxExpense,
+    required this.maxAmount,
     required this.animationValue,
+    this.movementType = MovementType.expense,
     this.isSelected = false,
     this.showLabel = false,
     this.size,
@@ -568,7 +584,7 @@ class _HeatmapCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final intensity = day.intensityFor(maxExpense) * animationValue;
+    final intensity = day.intensityForType(maxAmount, movementType) * animationValue;
 
     return GestureDetector(
       onTap: onTap,
@@ -611,14 +627,37 @@ class _HeatmapCell extends StatelessWidget {
   Color _getColor(double intensity) {
     if (intensity <= 0) return Colors.grey.withValues(alpha: 0.1);
 
-    if (intensity < 0.25) {
-      return Colors.green.withValues(alpha: 0.3 + intensity);
-    } else if (intensity < 0.5) {
-      return Colors.yellow.withValues(alpha: 0.5 + intensity * 0.5);
-    } else if (intensity < 0.75) {
-      return Colors.orange.withValues(alpha: 0.6 + intensity * 0.3);
-    } else {
-      return AppColors.expense.withValues(alpha: 0.7 + intensity * 0.3);
+    // Different color schemes based on movement type
+    switch (movementType) {
+      case MovementType.income:
+        // Green gradient for income
+        return Color.lerp(
+          AppColors.income.withValues(alpha: 0.2),
+          AppColors.income.withValues(alpha: 0.9),
+          intensity,
+        )!;
+      case MovementType.expense:
+        // Red gradient for expense
+        if (intensity < 0.5) {
+          return Color.lerp(
+            Colors.orange.withValues(alpha: 0.3),
+            Colors.deepOrange.withValues(alpha: 0.6),
+            intensity / 0.5,
+          )!;
+        } else {
+          return Color.lerp(
+            Colors.deepOrange.withValues(alpha: 0.6),
+            AppColors.expense.withValues(alpha: 0.9),
+            (intensity - 0.5) / 0.5,
+          )!;
+        }
+      case MovementType.both:
+        // Purple gradient for both
+        return Color.lerp(
+          AppColors.primary.withValues(alpha: 0.2),
+          AppColors.primary.withValues(alpha: 0.9),
+          intensity,
+        )!;
     }
   }
 }

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/alert.dart';
 import '../../providers/alert_provider.dart';
+import '../../widgets/cashito_mascot.dart';
 
 class AlertsScreen extends ConsumerStatefulWidget {
   const AlertsScreen({super.key});
@@ -113,27 +114,12 @@ class _AlertsScreenState extends ConsumerState<AlertsScreen> {
                     : alerts.where((a) => a.alertType == _selectedFilter).toList();
 
                 if (filteredAlerts.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.notifications_off_outlined,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _selectedFilter == null
-                              ? 'No tienes alertas'
-                              : 'No hay alertas de este tipo',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
+                  return CashitoEmptyState(
+                    mood: CashitoMood.noNotifications,
+                    title: _selectedFilter == null
+                        ? 'No tienes alertas'
+                        : 'No hay alertas de este tipo',
+                    subtitle: 'Todo esta en orden',
                   );
                 }
 

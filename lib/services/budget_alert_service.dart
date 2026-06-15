@@ -8,52 +8,66 @@ import '../presentation/providers/budget_provider.dart';
 /// Service that monitors budgets and creates alerts when thresholds are reached
 class BudgetAlertService {
   final Ref _ref;
-  static const String _alertedBudgetsKey = 'alerted_budgets';
+  static const String _alertedBudgetsKey = 'alerted_budgets_v2';
+  static bool _isChecking = false;
 
   BudgetAlertService(this._ref);
 
   /// Check all budgets and create alerts for those exceeding thresholds
   Future<void> checkBudgetsAndAlert() async {
-    final budgetsState = _ref.read(budgetNotifierProvider);
+    // Prevent concurrent checks
+    if (_isChecking) return;
+    _isChecking = true;
 
-    await budgetsState.whenOrNull(
-      data: (budgets) async {
-        final prefs = await SharedPreferences.getInstance();
-        final alertedBudgets = prefs.getStringList(_alertedBudgetsKey) ?? [];
+    try {
+      final budgetsState = _ref.read(budgetNotifierProvider);
 
-        for (final budgetWithSpent in budgets) {
-          final budget = budgetWithSpent.budget;
-          final percentUsed = budgetWithSpent.percentUsed;
+      await budgetsState.whenOrNull(
+        data: (budgets) async {
+          final prefs = await SharedPreferences.getInstance();
+          final alertedBudgets = prefs.getStringList(_alertedBudgetsKey) ?? [];
 
-          // Key for tracking alerts: budgetId_threshold
-          final warningKey = '${budget.id}_80';
-          final exceededKey = '${budget.id}_100';
+          for (final budgetWithSpent in budgets) {
+            final budget = budgetWithSpent.budget;
+            final percentUsed = budgetWithSpent.percentUsed;
 
-          // Check if budget exceeds 100% (over budget)
-          if (budgetWithSpent.isOverBudget && !alertedBudgets.contains(exceededKey)) {
-            await _createAlert(
-              title: 'Presupuesto excedido',
-              message: 'Has superado tu presupuesto ${budget.period.displayName.toLowerCase()} '
-                  'en un ${(percentUsed - 100).toStringAsFixed(0)}%',
-              alertType: AlertType.budgetWarning,
-            );
-            alertedBudgets.add(exceededKey);
+            // Key includes budget period dates to track per-period alerts
+            final periodKey = '${budget.startDate.toIso8601String().split('T')[0]}_${budget.endDate.toIso8601String().split('T')[0]}';
+            final warningKey = '${budget.id}_${periodKey}_80';
+            final exceededKey = '${budget.id}_${periodKey}_100';
+
+            // Check if budget exceeds 100% (over budget)
+            if (budgetWithSpent.isOverBudget && !alertedBudgets.contains(exceededKey)) {
+              await _createAlert(
+                title: 'Presupuesto excedido',
+                message: 'Has superado tu presupuesto ${budget.period.displayName.toLowerCase()} '
+                    'en un ${(percentUsed - 100).toStringAsFixed(0)}%',
+                alertType: AlertType.budgetWarning,
+              );
+              alertedBudgets.add(exceededKey);
+              // Also mark warning as alerted to avoid duplicate
+              if (!alertedBudgets.contains(warningKey)) {
+                alertedBudgets.add(warningKey);
+              }
+            }
+            // Check if budget is at warning level (80-99%)
+            else if (budgetWithSpent.isWarning && !alertedBudgets.contains(warningKey)) {
+              await _createAlert(
+                title: 'Alerta de presupuesto',
+                message: 'Has usado el ${percentUsed.toStringAsFixed(0)}% de tu presupuesto '
+                    '${budget.period.displayName.toLowerCase()}',
+                alertType: AlertType.budgetWarning,
+              );
+              alertedBudgets.add(warningKey);
+            }
           }
-          // Check if budget is at warning level (80-99%)
-          else if (budgetWithSpent.isWarning && !alertedBudgets.contains(warningKey)) {
-            await _createAlert(
-              title: 'Alerta de presupuesto',
-              message: 'Has usado el ${percentUsed.toStringAsFixed(0)}% de tu presupuesto '
-                  '${budget.period.displayName.toLowerCase()}',
-              alertType: AlertType.budgetWarning,
-            );
-            alertedBudgets.add(warningKey);
-          }
-        }
 
-        await prefs.setStringList(_alertedBudgetsKey, alertedBudgets);
-      },
-    );
+          await prefs.setStringList(_alertedBudgetsKey, alertedBudgets);
+        },
+      );
+    } finally {
+      _isChecking = false;
+    }
   }
 
   Future<void> _createAlert({

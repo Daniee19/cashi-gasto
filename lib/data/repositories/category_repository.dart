@@ -41,6 +41,7 @@ class CategoryRepository {
     String? description,
     String? icon,
     String? color,
+    String? imageUrl,
   }) async {
     if (_userId == null) {
       print('ERROR: Usuario no autenticado');
@@ -54,6 +55,7 @@ class CategoryRepository {
       'description': description,
       'icon': icon,
       'color': color,
+      'image_url': imageUrl,
       'is_default': false,
     };
 
@@ -81,6 +83,7 @@ class CategoryRepository {
     String? description,
     String? icon,
     String? color,
+    String? imageUrl,
   }) async {
     if (_userId == null) throw Exception('Usuario no autenticado');
 
@@ -89,6 +92,7 @@ class CategoryRepository {
       'description': description,
       'icon': icon,
       'color': color,
+      'image_url': imageUrl,
     };
 
     try {

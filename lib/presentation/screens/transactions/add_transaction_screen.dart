@@ -10,6 +10,7 @@ import '../../providers/category_provider.dart';
 import '../../providers/fund_provider.dart';
 import '../../providers/selected_fund_provider.dart';
 import '../../providers/transaction_provider.dart';
+import '../../widgets/category_icon.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
   const AddTransactionScreen({super.key});
@@ -186,17 +187,9 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                             itemBuilder: (context, index) {
                               final category = categories[index];
                               return ListTile(
-                                leading: Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: category.colorValue.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Icon(
-                                    _getCategoryIcon(category.icon),
-                                    color: category.colorValue,
-                                  ),
+                                leading: CategoryIcon(
+                                  category: category,
+                                  size: 40,
                                 ),
                                 title: Text(category.name),
                                 trailing: _selectedCategory?.id == category.id
@@ -318,23 +311,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     );
   }
 
-  IconData _getCategoryIcon(String? iconName) {
-    const iconMap = {
-      'restaurant': Icons.restaurant,
-      'directions_car': Icons.directions_car,
-      'movie': Icons.movie,
-      'shopping_bag': Icons.shopping_bag,
-      'medical_services': Icons.medical_services,
-      'school': Icons.school,
-      'receipt': Icons.receipt,
-      'more_horiz': Icons.more_horiz,
-      'payments': Icons.payments,
-      'trending_up': Icons.trending_up,
-      'card_giftcard': Icons.card_giftcard,
-    };
-    return iconMap[iconName] ?? Icons.category;
-  }
-
   IconData _getFundIcon(FundType type) {
     switch (type) {
       case FundType.general:
@@ -445,21 +421,24 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               // Category Selector
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: _selectedCategory?.colorValue.withOpacity(0.1) ??
-                        AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    _selectedCategory != null
-                        ? _getCategoryIcon(_selectedCategory!.icon)
-                        : Icons.category_outlined,
-                    color: _selectedCategory?.colorValue ?? AppColors.primary,
-                  ),
-                ),
+                leading: _selectedCategory != null
+                    ? CategoryIcon(
+                        category: _selectedCategory!,
+                        size: 48,
+                        borderRadius: 12,
+                      )
+                    : Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.category_outlined,
+                          color: AppColors.primary,
+                        ),
+                      ),
                 title: const Text(AppStrings.category),
                 subtitle: Text(
                   _selectedCategory?.name ?? 'Seleccionar categoria',

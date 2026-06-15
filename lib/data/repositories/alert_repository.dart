@@ -50,7 +50,7 @@ class AlertRepository {
     return (response as List).length;
   }
 
-  /// Crea una nueva alerta
+  /// Crea una nueva alerta (with deduplication)
   Future<Alert> addAlert({
     required AlertType alertType,
     required String title,
@@ -58,6 +58,17 @@ class AlertRepository {
     DateTime? alertDate,
   }) async {
     if (_userId == null) throw Exception('Usuario no autenticado');
+
+    // Check for duplicate alerts in the last 24 hours with same type and title
+    final existingAlert = await checkDuplicateAlert(
+      alertType: alertType,
+      title: title,
+    );
+
+    if (existingAlert != null) {
+      // Return existing alert instead of creating duplicate
+      return existingAlert;
+    }
 
     final data = {
       'user_id': _userId,
@@ -75,6 +86,32 @@ class AlertRepository {
         .single();
 
     return Alert.fromJson(response);
+  }
+
+  /// Check if a similar alert already exists within the last 24 hours
+  Future<Alert?> checkDuplicateAlert({
+    required AlertType alertType,
+    required String title,
+  }) async {
+    if (_userId == null) return null;
+
+    final yesterday = DateTime.now().subtract(const Duration(hours: 24));
+
+    final response = await _client
+        .from('alerts')
+        .select()
+        .eq('user_id', _userId!)
+        .eq('alert_type', alertType.toJsonString())
+        .eq('title', title)
+        .gte('created_at', yesterday.toIso8601String())
+        .order('created_at', ascending: false)
+        .limit(1);
+
+    final list = response as List;
+    if (list.isNotEmpty) {
+      return Alert.fromJson(list.first);
+    }
+    return null;
   }
 
   /// Marca una alerta como leida

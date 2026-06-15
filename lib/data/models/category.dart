@@ -30,6 +30,7 @@ class Category extends Equatable {
   final CategoryType type;
   final String? icon;
   final String? color;
+  final String? imageUrl;
   final bool isDefault;
   final DateTime createdAt;
 
@@ -41,9 +42,13 @@ class Category extends Equatable {
     required this.type,
     this.icon,
     this.color,
+    this.imageUrl,
     this.isDefault = false,
     required this.createdAt,
   });
+
+  /// Returns true if this category has a custom image
+  bool get hasImage => imageUrl != null && imageUrl!.isNotEmpty;
 
   factory Category.fromJson(Map<String, dynamic> json) {
     return Category(
@@ -56,6 +61,7 @@ class Category extends Equatable {
           : CategoryType.expense,
       icon: json['icon'] as String?,
       color: json['color'] as String?,
+      imageUrl: json['image_url'] as String?,
       isDefault: json['is_default'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
@@ -70,6 +76,7 @@ class Category extends Equatable {
       'type': type.value,
       'icon': icon,
       'color': color,
+      'image_url': imageUrl,
       'is_default': isDefault,
       'created_at': createdAt.toIso8601String(),
     };
@@ -88,6 +95,7 @@ class Category extends Equatable {
     CategoryType? type,
     String? icon,
     String? color,
+    String? imageUrl,
     bool? isDefault,
     DateTime? createdAt,
   }) {
@@ -99,11 +107,12 @@ class Category extends Equatable {
       type: type ?? this.type,
       icon: icon ?? this.icon,
       color: color ?? this.color,
+      imageUrl: imageUrl ?? this.imageUrl,
       isDefault: isDefault ?? this.isDefault,
       createdAt: createdAt ?? this.createdAt,
     );
   }
 
   @override
-  List<Object?> get props => [id, userId, name, description, type, icon, color, isDefault, createdAt];
+  List<Object?> get props => [id, userId, name, description, type, icon, color, imageUrl, isDefault, createdAt];
 }

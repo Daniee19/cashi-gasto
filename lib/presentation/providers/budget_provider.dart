@@ -44,29 +44,31 @@ class BudgetNotifier extends StateNotifier<AsyncValue<List<BudgetWithSpent>>> {
     required BudgetPeriod period,
     required double amountBudgeted,
     DateTime? startDate,
+    DateTime? endDate,
   }) async {
     try {
-      // Calcular fechas basadas en el período
+      // Calcular fechas basadas en el período si no se proporcionan
       final now = DateTime.now();
       DateTime start = startDate ?? now;
       DateTime end;
 
-      switch (period) {
-        case BudgetPeriod.weekly:
-          // Inicio del día actual, fin en 7 días
-          start = DateTime(start.year, start.month, start.day);
-          end = start.add(const Duration(days: 6));
-          break;
-        case BudgetPeriod.monthly:
-          // Inicio del mes actual, fin al último día del mes
-          start = DateTime(start.year, start.month, 1);
-          end = DateTime(start.year, start.month + 1, 0);
-          break;
-        case BudgetPeriod.yearly:
-          // Inicio del año actual, fin al 31 de diciembre
-          start = DateTime(start.year, 1, 1);
-          end = DateTime(start.year, 12, 31);
-          break;
+      if (endDate != null) {
+        end = endDate;
+      } else {
+        switch (period) {
+          case BudgetPeriod.weekly:
+            start = DateTime(start.year, start.month, start.day);
+            end = start.add(const Duration(days: 6));
+            break;
+          case BudgetPeriod.monthly:
+            start = DateTime(start.year, start.month, 1);
+            end = DateTime(start.year, start.month + 1, 0);
+            break;
+          case BudgetPeriod.yearly:
+            start = DateTime(start.year, 1, 1);
+            end = DateTime(start.year, 12, 31);
+            break;
+        }
       }
 
       await _repository.addBudget(

@@ -3,10 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../data/models/category.dart';
+import '../../../data/models/fund.dart';
+import '../../../data/models/report_models.dart';
 import '../../../data/repositories/reports_repository.dart';
 import '../../../services/pdf_export_service.dart';
 import '../../providers/reports_provider.dart';
+import '../../providers/fund_provider.dart';
+import '../../providers/selected_fund_provider.dart';
 import '../../widgets/charts/charts.dart';
+import '../../widgets/cashito_mascot.dart';
+import '../../widgets/category_icon.dart';
 
 class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
@@ -25,12 +32,12 @@ class ReportsScreen extends ConsumerWidget {
   Future<void> _exportToPdf(BuildContext context, WidgetRef ref) async {
     final summaryAsync = ref.read(reportSummaryProvider);
     final breakdownAsync = ref.read(categoryBreakdownProvider);
-    final trendsAsync = ref.read(monthlyTrendsProvider);
+    final topCategoriesAsync = ref.read(topCategoriesProvider);
 
     // Check if all data is loaded
     final summary = summaryAsync.valueOrNull;
     final breakdown = breakdownAsync.valueOrNull;
-    final trends = trendsAsync.valueOrNull;
+    final topCategories = topCategoriesAsync.valueOrNull;
 
     if (summary == null) {
       if (context.mounted) {
@@ -57,7 +64,7 @@ class ReportsScreen extends ConsumerWidget {
       await pdfService.generateAndShareReport(
         summary: summary,
         categoryBreakdown: breakdown ?? [],
-        monthlyTrends: trends ?? [],
+        topCategories: topCategories ?? [],
       );
 
       // Close loading indicator
@@ -75,16 +82,82 @@ class ReportsScreen extends ConsumerWidget {
     }
   }
 
+  Widget _buildFundSelector(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<Fund>> fundsAsync,
+    String? selectedFundId,
+  ) {
+    return fundsAsync.when(
+      loading: () => const SizedBox(height: 48),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (funds) {
+        if (funds.isEmpty) return const SizedBox.shrink();
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String?>(
+              value: selectedFundId,
+              isExpanded: true,
+              icon: const Icon(Icons.keyboard_arrow_down),
+              hint: const Text('Todos los fondos'),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Row(
+                    children: [
+                      Icon(Icons.account_balance_wallet, size: 20, color: AppColors.primary),
+                      SizedBox(width: 8),
+                      Text('Todos los fondos'),
+                    ],
+                  ),
+                ),
+                ...funds.map((fund) => DropdownMenuItem<String?>(
+                  value: fund.id,
+                  child: Row(
+                    children: [
+                      Icon(Icons.account_balance_wallet, size: 20, color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          fund.name,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+              ],
+              onChanged: (value) {
+                ref.read(selectedFundIdProvider.notifier).setSelectedFund(value);
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedPeriod = ref.watch(selectedReportPeriodProvider);
+    final selectedMovementType = ref.watch(selectedMovementTypeProvider);
     final summaryAsync = ref.watch(reportSummaryProvider);
     final breakdownAsync = ref.watch(categoryBreakdownProvider);
-    final trendsAsync = ref.watch(monthlyTrendsProvider);
+    final topCategoriesAsync = ref.watch(topCategoriesProvider);
     // Providers avanzados
     final cashFlowAsync = ref.watch(cashFlowProvider);
-    final savingsAsync = ref.watch(savingsIndicatorProvider);
+    final spendingComparisonAsync = ref.watch(spendingComparisonProvider);
     final dailyAmountsAsync = ref.watch(dailyAmountsProvider);
+    // Fondos
+    final fundsAsync = ref.watch(fundNotifierProvider);
+    final selectedFundId = ref.watch(selectedFundIdProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -101,9 +174,9 @@ class ReportsScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(reportSummaryProvider);
           ref.invalidate(categoryBreakdownProvider);
-          ref.invalidate(monthlyTrendsProvider);
+          ref.invalidate(topCategoriesProvider);
           ref.invalidate(cashFlowProvider);
-          ref.invalidate(savingsIndicatorProvider);
+          ref.invalidate(spendingComparisonProvider);
           ref.invalidate(dailyAmountsProvider);
         },
         child: SingleChildScrollView(
@@ -112,11 +185,24 @@ class ReportsScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Fund selector
+              _buildFundSelector(context, ref, fundsAsync, selectedFundId),
+              const SizedBox(height: 12),
+
               // Period selector
               _PeriodSelector(
                 selected: selectedPeriod,
                 onChanged: (period) {
                   ref.read(selectedReportPeriodProvider.notifier).state = period;
+                },
+              ),
+              const SizedBox(height: 12),
+
+              // Movement type selector
+              _MovementTypeSelector(
+                selected: selectedMovementType,
+                onChanged: (type) {
+                  ref.read(selectedMovementTypeProvider.notifier).state = type;
                 },
               ),
               const SizedBox(height: 20),
@@ -131,7 +217,11 @@ class ReportsScreen extends ConsumerWidget {
 
               // Category breakdown
               Text(
-                'Gastos por categoria',
+                selectedMovementType == MovementType.income
+                    ? 'Ingresos por categoria'
+                    : selectedMovementType == MovementType.expense
+                        ? 'Gastos por categoria'
+                        : 'Movimientos por categoria',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -141,25 +231,34 @@ class ReportsScreen extends ConsumerWidget {
                 loading: () => const _LoadingCard(height: 300),
                 error: (e, _) => _ErrorCard(message: e.toString()),
                 data: (breakdown) => breakdown.isEmpty
-                    ? const _EmptyCard(message: 'No hay gastos en este periodo')
+                    ? _EmptyCard(
+                        message: selectedMovementType == MovementType.income
+                            ? 'No hay ingresos en este periodo'
+                            : 'No hay gastos en este periodo',
+                      )
                     : _CategoryPieChart(breakdown: breakdown),
               ),
               const SizedBox(height: 20),
 
-              // Monthly trends
+              // Top categories bar chart
               Text(
-                'Tendencia mensual',
+                selectedMovementType == MovementType.income
+                    ? 'Top categorias de ingresos'
+                    : 'Top categorias de gastos',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 12),
-              trendsAsync.when(
+              topCategoriesAsync.when(
                 loading: () => const _LoadingCard(height: 250),
                 error: (e, _) => _ErrorCard(message: e.toString()),
-                data: (trends) => trends.isEmpty
+                data: (categories) => categories.isEmpty
                     ? const _EmptyCard(message: 'No hay datos suficientes')
-                    : _TrendsLineChart(trends: trends),
+                    : _TopCategoriesBarChart(
+                        categories: categories,
+                        isIncome: selectedMovementType == MovementType.income,
+                      ),
               ),
               const SizedBox(height: 24),
 
@@ -198,49 +297,40 @@ class ReportsScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
-                        child: CashFlowAreaChart(data: cashFlow),
+                        child: CashFlowAreaChart(
+                          data: cashFlow,
+                          movementType: selectedMovementType,
+                        ),
                       ),
               ),
               const SizedBox(height: 24),
 
-              // Indicador de ahorro
+              // Comparacion con periodo anterior
               Text(
-                'Resumen de ahorro',
+                'Tendencia de ${selectedMovementType == MovementType.income ? 'ingresos' : 'gastos'}',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
-                'Como distribuyes tus ingresos',
+                'Comparacion con ${selectedPeriod == ReportPeriod.week ? 'la semana' : selectedPeriod == ReportPeriod.month ? 'el mes' : 'el ano'} anterior',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: AppColors.textMuted,
                 ),
               ),
               const SizedBox(height: 12),
-              savingsAsync.when(
-                loading: () => const _LoadingCard(height: 380),
+              spendingComparisonAsync.when(
+                loading: () => const _LoadingCard(height: 180),
                 error: (e, _) => _ErrorCard(message: e.toString()),
-                data: (savings) => (savings.totalIncome == 0 && savings.totalExpense == 0)
-                    ? const _EmptyCard(message: 'No hay datos para mostrar')
-                    : Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 10,
-                            ),
-                          ],
-                        ),
-                        child: SavingsGaugeChart(data: savings, size: 180),
-                      ),
+                data: (comparison) => _SpendingComparisonCard(
+                  comparison: comparison,
+                  movementType: selectedMovementType,
+                ),
               ),
               const SizedBox(height: 24),
 
-              // Heatmap de gastos
+              // Heatmap de actividad
               Text(
                 'Mapa de actividad',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -249,7 +339,11 @@ class ReportsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Intensidad de gastos por dia',
+                selectedMovementType == MovementType.income
+                    ? 'Intensidad de ingresos por dia'
+                    : selectedMovementType == MovementType.expense
+                        ? 'Intensidad de gastos por dia'
+                        : 'Intensidad de movimientos por dia',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: AppColors.textMuted,
                 ),
@@ -276,6 +370,7 @@ class ReportsScreen extends ConsumerWidget {
                         child: FinancialHeatmap(
                           data: dailyAmounts,
                           period: selectedPeriod,
+                          movementType: selectedMovementType,
                         ),
                       ),
               ),
@@ -335,6 +430,74 @@ class _PeriodSelector extends StatelessWidget {
   }
 }
 
+class _MovementTypeSelector extends StatelessWidget {
+  final MovementType selected;
+  final ValueChanged<MovementType> onChanged;
+
+  const _MovementTypeSelector({
+    required this.selected,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: MovementType.values.map((type) {
+          final isSelected = type == selected;
+          Color bgColor;
+          Color textColor;
+
+          if (isSelected) {
+            switch (type) {
+              case MovementType.income:
+                bgColor = AppColors.income;
+                break;
+              case MovementType.expense:
+                bgColor = AppColors.expense;
+                break;
+              case MovementType.both:
+                bgColor = AppColors.primary;
+                break;
+            }
+            textColor = Colors.white;
+          } else {
+            bgColor = Colors.transparent;
+            textColor = Colors.grey[700]!;
+          }
+
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => onChanged(type),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  type.displayName,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
 class _SummaryCard extends StatelessWidget {
   final ReportSummary summary;
 
@@ -342,7 +505,7 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(locale: 'es_MX', symbol: '\$');
+    final currencyFormat = NumberFormat.currency(locale: 'es_MX', symbol: 'S/ ');
     final isPositive = summary.balance >= 0;
 
     return Container(
@@ -475,7 +638,7 @@ class _CategoryPieChartState extends State<_CategoryPieChart> {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(locale: 'es_MX', symbol: '\$');
+    final currencyFormat = NumberFormat.currency(locale: 'es_MX', symbol: 'S/ ');
     final colors = [
       AppColors.primary,
       AppColors.secondary,
@@ -604,19 +767,34 @@ class _CategoryPieChartState extends State<_CategoryPieChart> {
   }
 }
 
-class _TrendsLineChart extends StatelessWidget {
-  final List<MonthlyTrend> trends;
+class _TopCategoriesBarChart extends StatelessWidget {
+  final List<CategoryBreakdown> categories;
+  final bool isIncome;
 
-  const _TrendsLineChart({required this.trends});
+  const _TopCategoriesBarChart({
+    required this.categories,
+    this.isIncome = false,
+  });
+
+  /// Crea una instancia temporal de Category para usar con CategoryIcon
+  Category _createTempCategory(CategoryBreakdown breakdown) {
+    return Category(
+      id: breakdown.categoryId,
+      name: breakdown.categoryName,
+      type: isIncome ? CategoryType.income : CategoryType.expense,
+      icon: breakdown.categoryIcon,
+      color: breakdown.categoryColor,
+      createdAt: DateTime.now(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (trends.isEmpty) return const SizedBox.shrink();
+    if (categories.isEmpty) return const SizedBox.shrink();
 
-    final maxY = trends.fold<double>(0, (max, t) {
-      final highest = t.income > t.expense ? t.income : t.expense;
-      return highest > max ? highest : max;
-    });
+    final currencyFormat = NumberFormat.currency(locale: 'es_MX', symbol: 'S/ ');
+    final maxAmount = categories.fold<double>(0, (max, c) => c.amount > max ? c.amount : max);
+    final barColor = isIncome ? AppColors.income : AppColors.expense;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -631,140 +809,90 @@ class _TrendsLineChart extends StatelessWidget {
         ],
       ),
       child: Column(
-        children: [
-          // Legend
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _LegendItem(color: AppColors.success, label: 'Ingresos'),
-              const SizedBox(width: 24),
-              _LegendItem(color: Colors.red, label: 'Gastos'),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 200,
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: maxY > 0 ? maxY / 4 : 1,
-                  getDrawingHorizontalLine: (value) {
-                    return FlLine(
-                      color: Colors.grey[200]!,
-                      strokeWidth: 1,
-                    );
-                  },
-                ),
-                titlesData: FlTitlesData(
-                  leftTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 30,
-                      getTitlesWidget: (value, meta) {
-                        final index = value.toInt();
-                        if (index < 0 || index >= trends.length) {
-                          return const SizedBox.shrink();
-                        }
-                        final monthName = DateFormat('MMM', 'es').format(trends[index].month);
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            monthName,
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 11,
+        children: categories.asMap().entries.map((entry) {
+          final index = entry.key;
+          final categoryBreakdown = entry.value;
+          final percentage = maxAmount > 0 ? categoryBreakdown.amount / maxAmount : 0.0;
+          final tempCategory = _createTempCategory(categoryBreakdown);
+
+          return Padding(
+            padding: EdgeInsets.only(bottom: index < categories.length - 1 ? 16 : 0),
+            child: Row(
+              children: [
+                // Icon
+                CategoryIcon(category: tempCategory, size: 40),
+                const SizedBox(width: 12),
+                // Name and bar
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              categoryBreakdown.categoryName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                        );
-                      },
-                    ),
+                          Text(
+                            currencyFormat.format(categoryBreakdown.amount),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: barColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      // Progress bar
+                      Stack(
+                        children: [
+                          Container(
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          FractionallySizedBox(
+                            widthFactor: percentage,
+                            child: Container(
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: barColor,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${categoryBreakdown.percentage.toStringAsFixed(1)}% del total',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  // Income line
-                  LineChartBarData(
-                    spots: trends.asMap().entries.map((e) {
-                      return FlSpot(e.key.toDouble(), e.value.income);
-                    }).toList(),
-                    isCurved: true,
-                    color: AppColors.success,
-                    barWidth: 3,
-                    isStrokeCapRound: true,
-                    dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: AppColors.success.withValues(alpha: 0.1),
-                    ),
-                  ),
-                  // Expense line
-                  LineChartBarData(
-                    spots: trends.asMap().entries.map((e) {
-                      return FlSpot(e.key.toDouble(), e.value.expense);
-                    }).toList(),
-                    isCurved: true,
-                    color: Colors.red,
-                    barWidth: 3,
-                    isStrokeCapRound: true,
-                    dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: Colors.red.withValues(alpha: 0.1),
-                    ),
-                  ),
-                ],
-                minY: 0,
-                maxY: maxY * 1.1,
-              ),
+              ],
             ),
-          ),
-        ],
+          );
+        }).toList(),
       ),
     );
   }
 }
 
-class _LegendItem extends StatelessWidget {
-  final Color color;
-  final String label;
-
-  const _LegendItem({required this.color, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 12,
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 class _LoadingCard extends StatelessWidget {
   final double height;
@@ -818,17 +946,208 @@ class _EmptyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(40),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.grey[100],
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Center(
-        child: Text(
-          message,
-          style: TextStyle(color: Colors.grey[600]),
-          textAlign: TextAlign.center,
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CashitoMascot(mood: CashitoMood.statsLow, size: 80),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            style: TextStyle(color: Colors.grey[600]),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SpendingComparisonCard extends StatelessWidget {
+  final SpendingComparison comparison;
+  final MovementType movementType;
+
+  const _SpendingComparisonCard({
+    required this.comparison,
+    required this.movementType,
+  });
+
+  /// Crea una instancia temporal de Category para usar con CategoryIcon
+  Category _createTempCategory(CategoryBreakdown breakdown, bool isIncome) {
+    return Category(
+      id: breakdown.categoryId,
+      name: breakdown.categoryName,
+      type: isIncome ? CategoryType.income : CategoryType.expense,
+      icon: breakdown.categoryIcon,
+      color: breakdown.categoryColor,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currencyFormat = NumberFormat.currency(locale: 'es_MX', symbol: 'S/ ');
+    final isIncome = movementType == MovementType.income;
+    final primaryColor = isIncome ? AppColors.income : AppColors.expense;
+
+    // For expenses, an increase is bad; for income, an increase is good
+    final isPositiveChange = isIncome ? comparison.isIncrease : !comparison.isIncrease;
+    final changeColor = isPositiveChange ? AppColors.income : AppColors.expense;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Current period amount
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  isIncome ? Icons.trending_up : Icons.trending_down,
+                  color: primaryColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isIncome ? 'Total ingresos' : 'Total gastos',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      currencyFormat.format(comparison.currentPeriodAmount),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Divider(),
+          const SizedBox(height: 16),
+
+          // Comparison with previous period
+          Row(
+            children: [
+              Icon(
+                comparison.isIncrease ? Icons.arrow_upward : Icons.arrow_downward,
+                color: changeColor,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${comparison.percentageChange.abs().toStringAsFixed(1)}%',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: changeColor,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'vs ${comparison.previousPeriodLabel}',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            comparison.isIncrease
+                ? (isIncome
+                    ? 'Tus ingresos aumentaron ${currencyFormat.format(comparison.difference.abs())}'
+                    : 'Gastaste ${currencyFormat.format(comparison.difference.abs())} mas')
+                : (isIncome
+                    ? 'Tus ingresos disminuyeron ${currencyFormat.format(comparison.difference.abs())}'
+                    : 'Ahorraste ${currencyFormat.format(comparison.difference.abs())}'),
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 12,
+            ),
+          ),
+
+          // Top category (if available)
+          if (comparison.topCategory != null) ...[
+            const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                CategoryIcon(
+                  category: _createTempCategory(comparison.topCategory!, isIncome),
+                  size: 36,
+                  borderRadius: 8,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isIncome ? 'Mayor fuente de ingreso' : 'Mayor gasto',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 11,
+                        ),
+                      ),
+                      Text(
+                        comparison.topCategory!.categoryName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  currencyFormat.format(comparison.topCategory!.amount),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/fund.dart';
+import '../../data/models/transaction.dart';
 import '../../data/repositories/fund_repository.dart';
+import 'transaction_provider.dart';
 
 final fundRepositoryProvider = Provider<FundRepository>((ref) {
   return FundRepository();
@@ -9,6 +11,50 @@ final fundRepositoryProvider = Provider<FundRepository>((ref) {
 final fundsProvider = FutureProvider<List<Fund>>((ref) async {
   final repository = ref.watch(fundRepositoryProvider);
   return repository.getFunds();
+});
+
+/// Provider that returns funds with calculated balances from transactions
+final fundsWithCalculatedBalanceProvider = Provider<AsyncValue<List<Fund>>>((ref) {
+  final fundsAsync = ref.watch(fundNotifierProvider);
+  final transactionsAsync = ref.watch(transactionNotifierProvider);
+
+  // If either is loading, return loading
+  if (fundsAsync.isLoading || transactionsAsync.isLoading) {
+    return const AsyncValue.loading();
+  }
+
+  // If either has an error, return the first error
+  if (fundsAsync.hasError) {
+    return AsyncValue.error(fundsAsync.error!, fundsAsync.stackTrace ?? StackTrace.current);
+  }
+  if (transactionsAsync.hasError) {
+    return AsyncValue.error(transactionsAsync.error!, transactionsAsync.stackTrace ?? StackTrace.current);
+  }
+
+  final funds = fundsAsync.value ?? [];
+  final transactions = transactionsAsync.value ?? [];
+
+  // Calculate balance for each fund from transactions
+  final Map<String, double> fundBalances = {};
+
+  for (final transaction in transactions) {
+    if (transaction.fundId != null) {
+      final currentBalance = fundBalances[transaction.fundId!] ?? 0;
+      if (transaction.type == TransactionType.income) {
+        fundBalances[transaction.fundId!] = currentBalance + transaction.amount;
+      } else if (transaction.type == TransactionType.expense) {
+        fundBalances[transaction.fundId!] = currentBalance - transaction.amount;
+      }
+    }
+  }
+
+  // Create new fund objects with calculated balances
+  final fundsWithBalances = funds.map((fund) {
+    final calculatedBalance = fundBalances[fund.id] ?? 0;
+    return fund.copyWith(balance: calculatedBalance);
+  }).toList();
+
+  return AsyncValue.data(fundsWithBalances);
 });
 
 class FundNotifier extends StateNotifier<AsyncValue<List<Fund>>> {

@@ -144,6 +144,31 @@ class DailyAmount extends Equatable {
     return (expense / maxAmount).clamp(0, 1);
   }
 
+  /// Intensidad normalizada (0-1) basada en el tipo de movimiento
+  double intensityForType(double maxAmount, MovementType movementType) {
+    if (maxAmount <= 0) return 0;
+    switch (movementType) {
+      case MovementType.income:
+        return (income / maxAmount).clamp(0, 1);
+      case MovementType.expense:
+        return (expense / maxAmount).clamp(0, 1);
+      case MovementType.both:
+        return (total / maxAmount).clamp(0, 1);
+    }
+  }
+
+  /// Obtiene el monto según el tipo de movimiento
+  double amountForType(MovementType movementType) {
+    switch (movementType) {
+      case MovementType.income:
+        return income;
+      case MovementType.expense:
+        return expense;
+      case MovementType.both:
+        return total;
+    }
+  }
+
   DailyAmount copyWith({
     DateTime? date,
     double? income,
@@ -361,5 +386,82 @@ class CategoryBreakdownExtended extends Equatable {
         percentage,
         transactionCount,
         averageTransaction,
+      ];
+}
+
+/// Category spending breakdown (duplicated here from repository for model consistency)
+class CategoryBreakdown extends Equatable {
+  final String categoryId;
+  final String categoryName;
+  final String? categoryIcon;
+  final String? categoryColor;
+  final double amount;
+  final double percentage;
+
+  const CategoryBreakdown({
+    required this.categoryId,
+    required this.categoryName,
+    this.categoryIcon,
+    this.categoryColor,
+    required this.amount,
+    required this.percentage,
+  });
+
+  @override
+  List<Object?> get props => [categoryId, categoryName, categoryIcon, categoryColor, amount, percentage];
+}
+
+/// Comparacion de gastos entre periodos
+class SpendingComparison extends Equatable {
+  final double currentPeriodAmount;
+  final double previousPeriodAmount;
+  final CategoryBreakdown? topCategory;
+  final ReportPeriod period;
+  final MovementType movementType;
+
+  const SpendingComparison({
+    required this.currentPeriodAmount,
+    required this.previousPeriodAmount,
+    this.topCategory,
+    required this.period,
+    required this.movementType,
+  });
+
+  /// Diferencia absoluta entre periodos
+  double get difference => currentPeriodAmount - previousPeriodAmount;
+
+  /// Porcentaje de cambio (puede ser positivo o negativo)
+  double get percentageChange {
+    if (previousPeriodAmount <= 0) {
+      return currentPeriodAmount > 0 ? 100 : 0;
+    }
+    return ((currentPeriodAmount - previousPeriodAmount) / previousPeriodAmount) * 100;
+  }
+
+  /// Si el cambio es un aumento
+  bool get isIncrease => difference > 0;
+
+  /// Si el cambio es significativo (mas del 5%)
+  bool get isSignificant => percentageChange.abs() > 5;
+
+  /// Etiqueta del periodo anterior segun el tipo de periodo
+  String get previousPeriodLabel {
+    switch (period) {
+      case ReportPeriod.week:
+        return 'semana anterior';
+      case ReportPeriod.month:
+        return 'mes anterior';
+      case ReportPeriod.year:
+        return 'ano anterior';
+    }
+  }
+
+  @override
+  List<Object?> get props => [
+        currentPeriodAmount,
+        previousPeriodAmount,
+        topCategory,
+        period,
+        movementType,
       ];
 }
