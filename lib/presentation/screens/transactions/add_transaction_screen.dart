@@ -1,16 +1,23 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../data/models/category.dart';
 import '../../../data/models/fund.dart';
 import '../../../data/models/transaction.dart';
+import '../../../services/ocr_service.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/fund_provider.dart';
 import '../../providers/selected_fund_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../widgets/category_icon.dart';
+import 'ocr_result_sheet.dart';
+
+enum _ScanSource { camera, gallery, pdf }
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
   const AddTransactionScreen({super.key});
@@ -67,6 +74,167 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     _amountController.dispose();
     _noteController.dispose();
     super.dispose();
+  }
+
+  Future<void> _scanDocument() async {
+    final source = await showModalBottomSheet<_ScanSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40, height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+              ),
+              const Text('Escanear documento', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              const Text('Selecciona la fuente del documento', style: TextStyle(color: AppColors.textMuted)),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.camera_alt, color: AppColors.primary),
+                ),
+                title: const Text('Camara'),
+                subtitle: const Text('Tomar foto del documento'),
+                onTap: () => Navigator.pop(context, _ScanSource.camera),
+              ),
+              ListTile(
+                leading: Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.info.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.photo_library, color: AppColors.info),
+                ),
+                title: const Text('Galeria'),
+                subtitle: const Text('Elegir imagen existente'),
+                onTap: () => Navigator.pop(context, _ScanSource.gallery),
+              ),
+              ListTile(
+                leading: Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.picture_as_pdf, color: AppColors.error),
+                ),
+                title: const Text('Archivo PDF'),
+                subtitle: const Text('Seleccionar documento PDF'),
+                onTap: () => Navigator.pop(context, _ScanSource.pdf),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (source == null || !mounted) return;
+
+    if (source == _ScanSource.pdf) {
+      await _handlePdfScan();
+    } else {
+      await _handleImageScan(
+        source == _ScanSource.camera ? ImageSource.camera : ImageSource.gallery,
+      );
+    }
+  }
+
+  Future<void> _handleImageScan(ImageSource source) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: source, maxWidth: 1200, imageQuality: 90);
+    if (picked == null || !mounted) return;
+
+    final imageFile = File(picked.path);
+    final result = await _showOcrResultSheet(imageFile: imageFile);
+    _applyOcrResult(result);
+  }
+
+  Future<void> _handlePdfScan() async {
+    final pickedFile = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+    );
+    if (pickedFile == null || pickedFile.files.single.path == null || !mounted) return;
+
+    final pdfPath = pickedFile.files.single.path!;
+    final ocrService = OcrService();
+
+    try {
+      // Mostrar loading mientras procesa el PDF
+      final categoriesState = ref.read(categoryNotifierProvider);
+      final categories = categoriesState.valueOrNull ?? [];
+
+      // Procesar PDF (renderizar páginas + OCR)
+      final ocrResult = await ocrService.processPdf(pdfPath, categories);
+      ocrService.dispose();
+
+      if (!mounted) return;
+
+      // Usar la primera página renderizada como preview, o el PDF original como fallback
+      final previewFile = ocrResult.previewImage ?? File(pdfPath);
+
+      final result = await _showOcrResultSheet(
+        imageFile: previewFile,
+        precomputedResult: ocrResult,
+      );
+      _applyOcrResult(result);
+    } catch (e) {
+      ocrService.dispose();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al procesar PDF: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  Future<OcrConfirmedData?> _showOcrResultSheet({
+    required File imageFile,
+    OcrResult? precomputedResult,
+  }) {
+    return showModalBottomSheet<OcrConfirmedData>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, _) => OcrResultSheet(
+          imageFile: imageFile,
+          precomputedResult: precomputedResult,
+        ),
+      ),
+    );
+  }
+
+  void _applyOcrResult(OcrConfirmedData? result) {
+    if (result == null || !mounted) return;
+    setState(() {
+      _amountController.text = result.amount.toStringAsFixed(2);
+      _transactionType = result.type;
+      _selectedCategory = result.category;
+      if (result.note != null) {
+        _noteController.text = result.note!;
+      }
+    });
   }
 
   Future<void> _selectDate() async {
@@ -329,6 +497,13 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(AppStrings.addTransaction),
+        actions: [
+          IconButton(
+            onPressed: _scanDocument,
+            icon: const Icon(Icons.document_scanner_outlined),
+            tooltip: 'Escanear documento',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

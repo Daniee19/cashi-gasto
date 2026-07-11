@@ -37,6 +37,9 @@ flutter clean && flutter pub get
 
 # Build release APK
 flutter build apk --release
+
+# Build App Bundle for Play Store
+flutter build appbundle --release
 ```
 
 ## Environment Setup
@@ -111,7 +114,7 @@ Important:
 2. `xxxProvider` - simple FutureProvider for read-only data
 3. `xxxNotifierProvider` - StateNotifierProvider with `AsyncValue<List<T>>` for CRUD operations
 
-StateNotifier pattern in use wraps state in `AsyncValue` and exposes methods that return `Future<bool>` for success/failure. After mutations, call `loadXxx()` to refresh state.
+StateNotifier pattern in use wraps state in `AsyncValue` and exposes methods that return `Future<bool>` for success/failure. After mutations, call `loadXxx()` to refresh state. Some notifiers cross-refresh related data (e.g., `TransactionNotifier` refreshes budgets after mutations).
 
 **Navigation**: Use `context.go()` for replacement, `context.push()` for stack navigation. Route constants in `AppRoutes` class.
 
@@ -123,4 +126,4 @@ StateNotifier pattern in use wraps state in `AsyncValue` and exposes methods tha
 
 ## Language
 
-User-facing strings and validation messages are in Spanish. Core utilities are in `lib/core/utils/` including `Validators` for form validation and formatters for currency/dates.
+User-facing strings and validation messages are in Spanish. Use descriptive Spanish names for business-domain variables. Core utilities are in `lib/core/utils/` including `Validators` for form validation and formatters for currency/dates.
