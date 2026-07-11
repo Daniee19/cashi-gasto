@@ -12,6 +12,7 @@ import '../presentation/screens/funds/transfer_fund_screen.dart';
 import '../presentation/screens/goals/goals_screen.dart';
 import '../presentation/screens/alerts/alerts_screen.dart';
 import '../presentation/screens/reports/reports_screen.dart';
+import '../presentation/screens/settings/sms_settings_screen.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -34,6 +35,7 @@ class AppRoutes {
   static const String reports = '/reports';
   static const String chatbot = '/chatbot';
   static const String settings = '/settings';
+  static const String smsSettings = '/settings/sms-detection';
   static const String abstinenceTracker = '/addiction-support/tracker';
   static const String blockedApps = '/addiction-support/blocked-apps';
   static const String supportResources = '/addiction-support/resources';
@@ -101,6 +103,11 @@ class AppRoutes {
         path: reports,
         name: 'reports',
         builder: (context, state) => const ReportsScreen(),
+      ),
+      GoRoute(
+        path: smsSettings,
+        name: 'smsSettings',
+        builder: (context, state) => const SmsSettingsScreen(),
       ),
       // TODO: Add remaining routes as screens are implemented
     ],
