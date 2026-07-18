@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:pdfx/pdfx.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart' as sf;
 import 'package:path_provider/path_provider.dart';
 import '../data/models/category.dart';
 import '../data/models/transaction.dart';
@@ -41,42 +42,63 @@ class OcrService {
     );
   }
 
-  /// Procesa un PDF: renderiza cada página, OCR cada una, combina resultados
+  /// Procesa un PDF: extrae texto directo, si falla usa OCR
   Future<OcrResult> processPdf(String pdfPath, List<Category> categories) async {
-    final document = await PdfDocument.openFile(pdfPath);
-    final pageCount = document.pagesCount;
     final tempDir = await getTemporaryDirectory();
-    final allTexts = <String>[];
     File? preview;
+    String combinedText = '';
 
-    // ponytail: OCR máx 5 páginas, suficiente para cualquier recibo/factura
-    final pagesToProcess = pageCount > 5 ? 5 : pageCount;
+    // ponytail: primero intenta extracción directa (PDFs con texto real)
+    try {
+      final bytes = await File(pdfPath).readAsBytes();
+      final sfDoc = sf.PdfDocument(inputBytes: bytes);
+      final extractor = sf.PdfTextExtractor(sfDoc);
+      combinedText = extractor.extractText();
+      sfDoc.dispose();
+    } catch (_) {
+      // Si falla, continuamos con OCR
+    }
 
-    for (int i = 1; i <= pagesToProcess; i++) {
-      final page = await document.getPage(i);
-      final pageImage = await page.render(
-        width: page.width * 2,
-        height: page.height * 2,
-        format: PdfPageImageFormat.png,
-      );
+    // Generar preview de primera página con pdfx
+    final document = await PdfDocument.openFile(pdfPath);
+    final firstPage = await document.getPage(1);
+    final pageImage = await firstPage.render(
+      width: firstPage.width * 2,
+      height: firstPage.height * 2,
+      format: PdfPageImageFormat.png,
+    );
+    if (pageImage != null) {
+      preview = File('${tempDir.path}/ocr_pdf_preview.png');
+      await preview.writeAsBytes(pageImage.bytes);
+    }
+    await firstPage.close();
 
-      if (pageImage != null) {
-        final tempFile = File('${tempDir.path}/ocr_pdf_page_$i.png');
-        await tempFile.writeAsBytes(pageImage.bytes);
+    // Si no hay texto, fallback a OCR (para PDFs escaneados)
+    if (combinedText.trim().isEmpty) {
+      final pageCount = document.pagesCount;
+      final allTexts = <String>[];
+      final pagesToProcess = pageCount > 5 ? 5 : pageCount;
 
-        if (i == 1) preview = tempFile;
-
-        final inputImage = InputImage.fromFile(tempFile);
-        final recognized = await _recognizer.processImage(inputImage);
-        allTexts.add(recognized.text);
+      for (int i = 1; i <= pagesToProcess; i++) {
+        final page = await document.getPage(i);
+        final img = await page.render(
+          width: page.width * 3,
+          height: page.height * 3,
+          format: PdfPageImageFormat.png,
+        );
+        if (img != null) {
+          final tempFile = File('${tempDir.path}/ocr_pdf_page_$i.png');
+          await tempFile.writeAsBytes(img.bytes);
+          final inputImage = InputImage.fromFile(tempFile);
+          final recognized = await _recognizer.processImage(inputImage);
+          allTexts.add(recognized.text);
+        }
+        await page.close();
       }
-
-      await page.close();
+      combinedText = allTexts.join('\n');
     }
 
     await document.close();
-
-    final combinedText = allTexts.join('\n');
     final lower = combinedText.toLowerCase();
 
     return OcrResult(
@@ -89,31 +111,23 @@ class OcrService {
     );
   }
 
-  /// Extrae el monto más grande del texto (asume que es el total)
+  /// Extrae el monto total del texto
   double? _extractAmount(String text) {
-    // ponytail: busca patrones de monto comunes en recibos peruanos/latinos
-    final patterns = [
-      RegExp(r'total\s*:?\s*S?/?\.?\s*(\d[\d,]*\.?\d*)', caseSensitive: false),
-      RegExp(r'importe\s*:?\s*S?/?\.?\s*(\d[\d,]*\.?\d*)', caseSensitive: false),
-      RegExp(r'monto\s*:?\s*S?/?\.?\s*(\d[\d,]*\.?\d*)', caseSensitive: false),
-      RegExp(r'S/\.?\s*(\d[\d,]*\.?\d*)'),
-      RegExp(r'\$\s*(\d[\d,]*\.?\d*)'),
-    ];
-
-    for (final pattern in patterns) {
-      final match = pattern.firstMatch(text);
-      if (match != null) {
-        final raw = match.group(1)!.replaceAll(',', '');
-        final value = double.tryParse(raw);
-        if (value != null && value > 0) return value;
-      }
-    }
-
-    // Fallback: el número más grande encontrado
-    final allNumbers = RegExp(r'(\d+\.?\d{0,2})')
+    // ponytail: buscar números con decimales (montos reales)
+    // Direcciones/fechas/RUC no tienen decimales
+    final allNumbers = RegExp(r'(\d[\d,]*[.,]\d{1,2})')
         .allMatches(text)
-        .map((m) => double.tryParse(m.group(1)!) ?? 0)
-        .where((n) => n > 0.5) // ignorar centavos sueltos
+        .map((m) {
+          var raw = m.group(1)!.replaceAll(',', '.');
+          // Múltiples puntos: solo el último es decimal
+          final dots = '.'.allMatches(raw).length;
+          if (dots > 1) {
+            final lastDot = raw.lastIndexOf('.');
+            raw = raw.substring(0, lastDot).replaceAll('.', '') + raw.substring(lastDot);
+          }
+          return double.tryParse(raw) ?? 0;
+        })
+        .where((n) => n > 0.5 && n < 10000000)
         .toList();
 
     if (allNumbers.isEmpty) return null;

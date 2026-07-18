@@ -107,6 +107,13 @@ class MoreScreen extends ConsumerWidget {
             onTap: () => context.push(AppRoutes.alerts),
           ),
           _OptionTile(
+            icon: Icons.phonelink_ring,
+            iconColor: Colors.deepPurple,
+            title: 'Deteccion automatica',
+            subtitle: 'Registrar gastos desde notificaciones',
+            onTap: () => context.push(AppRoutes.smsSettings),
+          ),
+          _OptionTile(
             icon: Icons.pie_chart,
             iconColor: Colors.orange,
             title: 'Reportes',
