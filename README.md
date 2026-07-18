@@ -1,257 +1,295 @@
 <p align="center">
-  <img src="assets/images/logo.png" alt="Cashi Gasto Logo" width="120" height="120">
+  <img src="assets/images/logo.png" alt="Cashi Gasto Logo" width="180"/>
 </p>
 
 <h1 align="center">Cashi Gasto</h1>
 
 <p align="center">
-  <strong>Tu asistente personal de finanzas inteligente</strong>
+  <strong>Tu asistente personal de finanzas con deteccion automatica</strong>
 </p>
 
 <p align="center">
   <a href="#caracteristicas">Caracteristicas</a> •
-  <a href="#capturas">Capturas</a> •
+  <a href="#deteccion-automatica">Deteccion Automatica</a> •
+  <a href="#ocr">OCR</a> •
   <a href="#instalacion">Instalacion</a> •
-  <a href="#configuracion">Configuracion</a> •
-  <a href="#arquitectura">Arquitectura</a> •
-  <a href="#contribuir">Contribuir</a>
+  <a href="#arquitectura">Arquitectura</a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Flutter-3.9+-02569B?logo=flutter" alt="Flutter">
-  <img src="https://img.shields.io/badge/Dart-3.9+-0175C2?logo=dart" alt="Dart">
+  <img src="https://img.shields.io/badge/Flutter-3.9.2-02569B?logo=flutter" alt="Flutter">
+  <img src="https://img.shields.io/badge/Dart-3.9.2-0175C2?logo=dart" alt="Dart">
   <img src="https://img.shields.io/badge/Supabase-Backend-3ECF8E?logo=supabase" alt="Supabase">
-  <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License">
+  <img src="https://img.shields.io/badge/Platform-Android%20%7C%20iOS-lightgrey" alt="Platform">
 </p>
 
 ---
 
 ## Acerca del Proyecto
 
-**Cashi Gasto** es una aplicacion movil de gestion de finanzas personales desarrollada con Flutter, disenada para ayudar a diferentes segmentos de usuarios a tomar control de su economia de manera inteligente y personalizada.
-
-### Segmentos de Usuario
-
-| Segmento | Descripcion | Funcionalidades Clave |
-|----------|-------------|----------------------|
-| **Jovenes (18+)** | Educacion financiera y establecimiento de metas | Chatbot IA, consejos personalizados, gamificacion |
-| **Pequenos negocios** | Control de gastos e ingresos empresariales | OCR de recibos, automatizacion SMS, alertas predictivas |
-| **Apoyo a adicciones** | Herramientas para ludopatia | Tracker de abstinencia, bloqueo de apps, recursos de ayuda |
+**Cashi Gasto** es una aplicacion de finanzas personales que te ayuda a registrar tus gastos e ingresos de forma inteligente. Detecta automaticamente tus transacciones bancarias desde las notificaciones de Yape, BCP y otros bancos peruanos, y puede escanear boletas y facturas con OCR.
 
 ### Mascota
 
-Conoce a **Cashito**, nuestra mascota amigable que te acompana en tu camino hacia la libertad financiera.
+Conoce a **Cashito**, el gatito que cuida tu alcancia y te acompana en tu camino hacia la libertad financiera.
 
 ---
 
 ## Caracteristicas
 
-### Gestion Financiera
-- Registro de ingresos y gastos con categorizacion
-- Multiples fondos/cuentas (efectivo, banco, ahorros)
-- Visualizacion de transacciones con filtros avanzados
-- Graficos y reportes interactivos
+### Gestion de Transacciones
+- Registro de ingresos y gastos
+- Categorias personalizables con iconos
+- Multiples fondos/cuentas (efectivo, banco, tarjetas, Yape)
+- Historial con filtros por fecha, categoria y tipo
+- Transferencias entre fondos
 
-### Presupuestos y Metas
-- Creacion de presupuestos semanales, mensuales o anuales
-- Metas financieras con seguimiento de progreso
-- Alertas cuando te acercas al limite
+### Presupuestos
+- Presupuestos mensuales por categoria
+- Barra de progreso visual
+- Alertas al acercarte al limite
 
-### Prestamos
-- Registro de prestamos dados y recibidos
-- Recordatorios de fechas de pago
-- Historial de pagos
+### Metas Financieras
+- Establece objetivos de ahorro
+- Seguimiento de progreso
+- Fecha limite opcional
 
-### Herramientas Inteligentes
-- **OCR**: Escanea recibos y extrae datos automaticamente
-- **SMS**: Detecta transacciones bancarias automaticamente
-- **Notificaciones**: Alertas predictivas basadas en tus habitos
-
-### Modo de Apoyo (Adicciones)
-- Tracker de dias de abstinencia
-- Bloqueo de aplicaciones de apuestas
-- Bloqueo de dominios web relacionados
-- Recursos y contactos de especialistas
+### Reportes
+- Graficos de gastos por categoria
+- Comparativas mensuales
+- Exportacion a PDF
 
 ---
 
-## Capturas
+## Deteccion Automatica
 
-<p align="center">
-  <i>Proximamente...</i>
-</p>
+La app puede detectar automaticamente tus transacciones escuchando las notificaciones de apps bancarias.
+
+### Apps Soportadas
+
+| App | Banco | Funcionalidad |
+|-----|-------|---------------|
+| **Yape** | BCP | Pagos enviados y recibidos |
+| **BCP App** | BCP | Consumos, transferencias |
+| **Interbank App** | Interbank | Compras, depositos |
+| **BBVA Peru** | BBVA | Pagos, transferencias |
+| **Scotiabank** | Scotiabank | Transacciones |
+| **Banco de la Nacion** | BN | Operaciones |
+| **SMS Bancarios** | Varios | Alertas de consumo |
+
+### Como Funciona
+
+```
+Notificacion llega → Filtro de apps bancarias → Parser extrae datos
+                                                      ↓
+                                          Monto, tipo, descripcion
+                                                      ↓
+                              ┌─────────────────────────────────────┐
+                              │  Modo Automatico    Modo Manual     │
+                              │  Registra directo   Muestra para    │
+                              │  en la app          confirmar       │
+                              └─────────────────────────────────────┘
+```
+
+### Configuracion
+
+Accede desde: **Mas opciones > Deteccion automatica**
+
+1. Activa la deteccion
+2. Concede permiso de notificaciones
+3. Elige modo automatico o confirmacion manual
+4. Selecciona tu cuenta por defecto
+5. Habilita/deshabilita apps especificas
+
+---
+
+## OCR
+
+Escanea boletas, facturas y recibos para extraer los datos automaticamente.
+
+### Formatos Soportados
+
+| Formato | Metodo |
+|---------|--------|
+| **PDF con texto** | Extraccion directa (Syncfusion) |
+| **PDF escaneado** | OCR con ML Kit |
+| **Imagen (camara)** | OCR con ML Kit |
+| **Imagen (galeria)** | OCR con ML Kit |
+
+### Deteccion Inteligente
+
+- Detecta el monto total (numero mas grande con decimales)
+- Filtra automaticamente RUC, DNI, direcciones y fechas
+- Sugiere categoria basada en palabras clave del comercio
+- Extrae nombre del establecimiento
+
+### Ejemplo
+
+```
+SUPERMERCADO METRO
+Av. Javier Prado 1234
+RUC: 20100070970
+
+Arroz x2          S/. 12.80
+Aceite            S/. 15.50
+Leche x3          S/. 10.20
+
+TOTAL             S/. 45.43
+                      ↑
+              Detecta este monto
+```
 
 ---
 
 ## Instalacion
 
-### Requisitos Previos
+### Requisitos
 
-- [Flutter SDK](https://docs.flutter.dev/get-started/install) 3.9 o superior
-- [Dart SDK](https://dart.dev/get-dart) 3.9 o superior
-- Android Studio / VS Code con extensiones de Flutter
-- Cuenta en [Supabase](https://supabase.com/) (gratuita)
+- Flutter SDK 3.9.2+
+- Cuenta en Supabase
 
 ### Pasos
 
-1. **Clona el repositorio**
-   ```bash
-   git clone https://github.com/Daniee19/cashi-gasto.git
-   cd cashi-gasto
-   ```
+```bash
+# 1. Clonar repositorio
+git clone https://github.com/Daniee19/cashi-gasto.git
+cd cashi-gasto
 
-2. **Instala las dependencias**
-   ```bash
-   flutter pub get
-   ```
+# 2. Configurar variables de entorno
+cp .env.example .env
+# Editar .env con tus credenciales de Supabase
 
-3. **Configura las variables de entorno**
-   ```bash
-   cp .env.example .env
-   ```
-   Edita `.env` con tus credenciales de Supabase:
-   ```env
-   SUPABASE_URL=https://tu-proyecto.supabase.co
-   SUPABASE_ANON_KEY=tu_anon_key_aqui
-   ```
+# 3. Instalar dependencias
+flutter pub get
 
-4. **Configura la base de datos**
-   - Ve al SQL Editor de tu proyecto en Supabase
-   - Ejecuta el contenido de `supabase_schema.sql`
+# 4. Generar codigo (Riverpod, JSON)
+dart run build_runner build --delete-conflicting-outputs
 
-5. **Ejecuta la aplicacion**
-   ```bash
-   flutter run
-   ```
+# 5. Generar iconos
+dart run flutter_launcher_icons
 
----
-
-## Configuracion
+# 6. Ejecutar
+flutter run
+```
 
 ### Variables de Entorno
 
-| Variable | Descripcion | Requerido |
-|----------|-------------|-----------|
-| `SUPABASE_URL` | URL de tu proyecto Supabase | Si |
-| `SUPABASE_ANON_KEY` | Clave anonima (publica) de Supabase | Si |
-
-### Base de Datos
-
-El esquema de base de datos se encuentra en `supabase_schema.sql` e incluye:
-
-- **users** - Perfiles de usuario extendidos
-- **transactions** - Registro de transacciones
-- **categories** - Categorias personalizables
-- **funds** - Cuentas y fondos
-- **budgets** - Presupuestos
-- **financial_goals** - Metas financieras
-- **loans** - Prestamos
-- **alerts** - Sistema de alertas
-- **abstinence_tracker** - Seguimiento de abstinencia
-- **blocked_apps** - Aplicaciones bloqueadas
-- **blocked_domains** - Dominios bloqueados
-
-Todas las tablas implementan **Row Level Security (RLS)** para proteger los datos de cada usuario.
+```env
+SUPABASE_URL=https://tu-proyecto.supabase.co
+SUPABASE_ANON_KEY=tu-anon-key
+```
 
 ---
 
 ## Arquitectura
 
-El proyecto sigue **Clean Architecture** con organizacion basada en funcionalidades:
+Clean Architecture con organizacion por features:
 
 ```
 lib/
-├── app/                          # Configuracion de la app
-│   ├── app.dart                  # MaterialApp con ProviderScope
-│   ├── routes.dart               # Configuracion de GoRouter
-│   └── theme.dart                # Temas claro/oscuro
+├── app/                    # Bootstrap, rutas, tema
+│   ├── app.dart           # MaterialApp + inicializacion SMS
+│   ├── routes.dart        # GoRouter
+│   └── theme.dart         # Tema claro/oscuro
 │
-├── config/                       # Configuraciones
-│   └── supabase_config.dart      # Constantes de Supabase
+├── config/                 # Configuracion Supabase
 │
-├── core/                         # Nucleo compartido
-│   └── constants/                # Colores, strings, etc.
+├── core/                   # Constantes, colores
 │
-├── data/                         # Capa de datos
-│   ├── models/                   # Modelos de datos
-│   ├── repositories/             # Implementacion de repositorios
-│   └── datasources/              # Fuentes de datos (Supabase)
+├── data/
+│   ├── models/            # Transaction, Category, Fund, etc.
+│   ├── repositories/      # Logica de acceso a datos
+│   └── datasources/       # Supabase client
 │
-├── domain/                       # Capa de dominio
-│   ├── entities/                 # Entidades de negocio
-│   └── usecases/                 # Casos de uso
+├── presentation/
+│   ├── screens/           # UI por feature
+│   │   ├── auth/         # Login, registro
+│   │   ├── home/         # Dashboard
+│   │   ├── transactions/ # Lista, agregar, OCR
+│   │   ├── funds/        # Cuentas
+│   │   ├── categories/   # Categorias
+│   │   ├── budgets/      # Presupuestos
+│   │   ├── goals/        # Metas
+│   │   ├── reports/      # Graficos
+│   │   ├── alerts/       # Alertas
+│   │   ├── settings/     # Config SMS
+│   │   └── more/         # Menu
+│   ├── widgets/          # Componentes reutilizables
+│   └── providers/        # Riverpod state management
 │
-├── presentation/                 # Capa de presentacion
-│   ├── screens/                  # Pantallas por funcionalidad
-│   ├── widgets/                  # Widgets reutilizables
-│   └── providers/                # Providers de Riverpod
-│
-└── services/                     # Servicios externos
-    ├── ocr_service.dart          # Servicio de OCR
-    ├── sms_service.dart          # Servicio de SMS
-    └── notification_service.dart # Notificaciones locales
+└── services/
+    ├── ocr_service.dart                    # Escaneo de documentos
+    ├── sms_parser_service.dart             # Parser de notificaciones
+    └── transaction_notification_service.dart # Listener de notificaciones
 ```
 
 ### Stack Tecnologico
 
 | Categoria | Tecnologia |
 |-----------|------------|
-| **Framework** | Flutter 3.9+ |
-| **Estado** | Riverpod |
-| **Navegacion** | GoRouter |
-| **Backend** | Supabase (Auth, Database, Storage) |
-| **Graficos** | fl_chart |
-| **Animaciones** | Lottie |
-| **Notificaciones** | flutter_local_notifications |
+| Framework | Flutter 3.9.2 |
+| Estado | Riverpod + Code Generation |
+| Backend | Supabase (Auth, DB, Storage) |
+| Navegacion | GoRouter |
+| OCR | Google ML Kit + Syncfusion PDF |
+| Notificaciones | notification_listener_service |
+| Graficos | fl_chart |
+| Iconos | flutter_launcher_icons |
 
 ---
 
 ## Comandos Utiles
 
 ```bash
-# Instalar dependencias
-flutter pub get
-
-# Ejecutar la app
-flutter run
-
-# Generar codigo de Riverpod
-dart run build_runner build --delete-conflicting-outputs
-
-# Analizar codigo
-flutter analyze
-
-# Ejecutar tests
-flutter test
-
-# Limpiar y reconstruir
-flutter clean && flutter pub get
-
-# Compilar APK de release
-flutter build apk --release
-
-# Compilar App Bundle para Play Store
-flutter build appbundle --release
+flutter pub get                              # Instalar deps
+flutter run                                  # Ejecutar app
+flutter test                                 # Correr tests
+flutter analyze                              # Lint
+dart run build_runner build                  # Generar codigo
+dart run flutter_launcher_icons              # Generar iconos
+flutter build apk --release                  # Build APK
+flutter clean && flutter pub get             # Limpiar todo
 ```
 
 ---
 
-## Contribuir
+## Tests
 
-Las contribuciones son bienvenidas. Por favor, sigue estos pasos:
+```bash
+# Correr todos los tests
+flutter test
 
-1. Haz fork del proyecto
-2. Crea una rama para tu funcionalidad (`git checkout -b feature/nueva-funcionalidad`)
-3. Haz commit de tus cambios (`git commit -m 'Agrega nueva funcionalidad'`)
-4. Haz push a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Abre un Pull Request
+# Test de flujo SMS
+flutter test test/sms_flow_test.dart
+```
 
-### Guia de Estilo
+### Tests de Deteccion SMS
 
-- Sigue las [convenciones de Dart](https://dart.dev/guides/language/effective-dart/style)
-- Usa nombres descriptivos en espanol para variables de negocio
-- Documenta funciones publicas complejas
-- Escribe tests para nuevas funcionalidades
+13 casos validados:
+- Yape: pagos enviados y recibidos
+- BCP: consumos y transferencias
+- Interbank, BBVA: compras
+- SMS generico: consumos y depositos
+- Filtrado de apps no bancarias
+- Deduplicacion de notificaciones
+
+---
+
+## Base de Datos
+
+Esquema en `supabase_schema.sql`. Tablas principales:
+
+| Tabla | Descripcion |
+|-------|-------------|
+| users | Usuarios con segmento (youth, business, support) |
+| categories | Categorias de transacciones |
+| funds | Cuentas/fondos del usuario |
+| transactions | Ingresos y gastos |
+| budgets | Presupuestos mensuales |
+| goals | Metas de ahorro |
+| alerts | Alertas del sistema |
+
+Todas las tablas usan Row Level Security (RLS).
 
 ---
 
@@ -259,32 +297,37 @@ Las contribuciones son bienvenidas. Por favor, sigue estos pasos:
 
 - [x] Autenticacion con Supabase
 - [x] CRUD de transacciones
-- [ ] Dashboard con graficos
-- [ ] Presupuestos
-- [ ] Metas financieras
-- [ ] OCR de recibos
-- [ ] Deteccion de SMS bancarios
+- [x] Categorias personalizables
+- [x] Multiples fondos/cuentas
+- [x] Presupuestos
+- [x] Metas financieras
+- [x] OCR de recibos y facturas
+- [x] Deteccion automatica de notificaciones bancarias
+- [x] Reportes con graficos
+- [ ] Modo oscuro
+- [ ] Exportar a Excel
 - [ ] Chatbot con IA
 - [ ] Modo de apoyo a adicciones
-- [ ] Notificaciones predictivas
-- [ ] Exportar reportes (PDF/Excel)
+
+---
+
+## Contribuir
+
+1. Fork el proyecto
+2. Crea tu rama (`git checkout -b feature/nueva-funcionalidad`)
+3. Commit (`git commit -m 'feat: agregar funcionalidad'`)
+4. Push (`git push origin feature/nueva-funcionalidad`)
+5. Abre un Pull Request
 
 ---
 
 ## Licencia
 
-Este proyecto esta bajo la Licencia MIT. Consulta el archivo [LICENSE](LICENSE) para mas detalles.
-
----
-
-## Contacto
-
-**Cashi Gasto** - [@cashigasto](https://twitter.com/cashigasto)
-
-Link del proyecto: [https://github.com/Daniee19/cashi-gasto](https://github.com/Daniee19/cashi-gasto)
+Proyecto privado de uso personal.
 
 ---
 
 <p align="center">
-  Hecho con Flutter
+  Hecho con Flutter y mass cafe del necesario<br>
+  <strong>Cashi Gasto</strong> - Tu gatito financiero
 </p>

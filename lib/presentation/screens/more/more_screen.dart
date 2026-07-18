@@ -121,6 +121,13 @@ class MoreScreen extends ConsumerWidget {
             onTap: () => context.push(AppRoutes.reports),
           ),
           _OptionTile(
+            icon: Icons.pets,
+            iconColor: Colors.pink,
+            title: 'Cashito',
+            subtitle: 'Tu asistente financiero gatuno',
+            onTap: () => context.push(AppRoutes.chatbot),
+          ),
+          _OptionTile(
             icon: Icons.color_lens,
             iconColor: AppColors.secondary,
             title: 'Apariencia',
@@ -128,6 +135,24 @@ class MoreScreen extends ConsumerWidget {
             onTap: () {
               // TODO: Navigate to appearance
             },
+          ),
+
+          const SizedBox(height: 24),
+          Text(
+            'Bienestar',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(height: 12),
+
+          _OptionTile(
+            icon: Icons.support,
+            iconColor: Colors.purple,
+            title: 'Modo de Apoyo',
+            subtitle: 'Herramientas para ludopatia',
+            onTap: () => context.push(AppRoutes.addictionSupport),
           ),
 
           const SizedBox(height: 24),

@@ -13,6 +13,11 @@ import '../presentation/screens/goals/goals_screen.dart';
 import '../presentation/screens/alerts/alerts_screen.dart';
 import '../presentation/screens/reports/reports_screen.dart';
 import '../presentation/screens/settings/sms_settings_screen.dart';
+import '../presentation/screens/chat/chat_screen.dart';
+import '../presentation/screens/addiction_support/addiction_support_screen.dart';
+import '../presentation/screens/addiction_support/abstinence_tracker_screen.dart';
+import '../presentation/screens/addiction_support/blocked_apps_screen.dart';
+import '../presentation/screens/addiction_support/support_resources_screen.dart';
 
 class AppRoutes {
   AppRoutes._();
@@ -36,6 +41,7 @@ class AppRoutes {
   static const String chatbot = '/chatbot';
   static const String settings = '/settings';
   static const String smsSettings = '/settings/sms-detection';
+  static const String addictionSupport = '/addiction-support';
   static const String abstinenceTracker = '/addiction-support/tracker';
   static const String blockedApps = '/addiction-support/blocked-apps';
   static const String supportResources = '/addiction-support/resources';
@@ -108,6 +114,31 @@ class AppRoutes {
         path: smsSettings,
         name: 'smsSettings',
         builder: (context, state) => const SmsSettingsScreen(),
+      ),
+      GoRoute(
+        path: chatbot,
+        name: 'chatbot',
+        builder: (context, state) => const ChatScreen(),
+      ),
+      GoRoute(
+        path: addictionSupport,
+        name: 'addictionSupport',
+        builder: (context, state) => const AddictionSupportScreen(),
+      ),
+      GoRoute(
+        path: abstinenceTracker,
+        name: 'abstinenceTracker',
+        builder: (context, state) => const AbstinenceTrackerScreen(),
+      ),
+      GoRoute(
+        path: blockedApps,
+        name: 'blockedApps',
+        builder: (context, state) => const BlockedAppsScreen(),
+      ),
+      GoRoute(
+        path: supportResources,
+        name: 'supportResources',
+        builder: (context, state) => const SupportResourcesScreen(),
       ),
       // TODO: Add remaining routes as screens are implemented
     ],
