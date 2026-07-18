@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../presentation/providers/sms_settings_provider.dart';
 import 'routes.dart';
 import 'theme.dart';
 
@@ -8,7 +9,8 @@ class CashiGastoApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // TODO: Add theme mode provider for dark mode toggle
+    // Inicializar servicio de detección automática si está habilitado
+    ref.watch(smsSettingsNotifierProvider);
 
     return MaterialApp.router(
       title: 'Cashi Gasto',
